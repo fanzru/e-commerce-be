@@ -8,37 +8,351 @@
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
     />
-    <link rel="stylesheet" href="css/style.css" />
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome for icons -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
   </head>
-  <body>
-    <header>
-      <div class="container header-container">
-        <a href="index.html" class="logo">FORTEPAY</a>
+  <body class="bg-gray-50 font-sans flex flex-col min-h-screen">
+    <header class="bg-white shadow-sm">
+      <div
+        class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center"
+      >
+        <a href="index.html" class="font-bold text-xl text-gray-800"
+          >FORTEPAY</a
+        >
         <nav>
-          <div class="nav-links">
-            <!-- Navigation links will be inserted via JavaScript -->
+          <div class="flex space-x-6" id="nav-links">
+            <!-- Navigation will be dynamically updated by JavaScript -->
+            <a href="products.html" class="text-gray-600 hover:text-gray-900"
+              >Products</a
+            >
+            <a href="login.html" class="text-gray-600 hover:text-gray-900"
+              >Login</a
+            >
+            <a href="register.html" class="text-gray-600 hover:text-gray-900"
+              >Register</a
+            >
           </div>
         </nav>
       </div>
     </header>
 
-    <main class="main-content">
-      <div class="container">
-        <h1 class="page-title">Our Products</h1>
+    <main class="flex-grow py-8">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <h1 class="text-2xl font-semibold text-center text-gray-800 mb-8">
+          Our Products
+        </h1>
 
-        <div class="product-grid">
+        <div
+          id="product-grid"
+          class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+        >
           <!-- Products will be loaded here via JavaScript -->
-          <div class="loading-spinner">Loading products...</div>
+          <div class="col-span-full text-center py-12">
+            <div
+              class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-800"
+            ></div>
+            <p class="mt-2 text-gray-600">Loading products...</p>
+          </div>
         </div>
+
+        <!-- Product Card Template (will be cloned by JavaScript) -->
+        <template id="product-card-template">
+          <div
+            class="product-card bg-white rounded-lg shadow-sm overflow-hidden transition-transform duration-300 hover:shadow-md hover:-translate-y-1"
+          >
+            <div
+              class="product-image h-48 bg-gray-100 flex items-center justify-center p-4"
+            >
+              <img src="" alt="Product" class="h-full object-contain" />
+            </div>
+            <div class="p-4">
+              <h2
+                class="product-name text-lg font-medium text-gray-800 mb-2"
+              ></h2>
+              <div class="flex justify-between items-center mb-3">
+                <span
+                  class="product-price text-xl font-semibold text-green-600"
+                ></span>
+                <span class="product-stock text-sm text-gray-500"></span>
+              </div>
+              <button
+                class="add-to-cart-btn w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-md font-medium transition-colors flex items-center justify-center"
+              >
+                <i class="fas fa-cart-plus mr-2"></i>
+                Add to Cart
+              </button>
+            </div>
+          </div>
+        </template>
       </div>
     </main>
 
-    <footer>
-      <div class="container">
-        <p>&copy; 2023 FORTEPAY E-Commerce. All rights reserved.</p>
+    <footer class="bg-white border-t border-gray-200 mt-auto">
+      <div
+        class="max-w-7xl mx-auto px-4 py-6 text-center text-gray-500 text-sm"
+      >
+        <p>
+          &copy; 2025 FORTEPAY E-Commerce. Created by fanzru. All rights
+          reserved.
+        </p>
       </div>
     </footer>
 
+    <!-- Load JavaScript files -->
+    <script src="js/common.js"></script>
+    <script src="js/cart.js"></script>
+    <script src="js/products.js"></script>
     <script src="js/main.js"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", async function () {
+        // Override the initProductsPage function to use the new card template
+        window.initProductsPage = async function () {
+          console.log("Initializing products page");
+          const productGridContainer = document.getElementById("product-grid");
+          const productCardTemplate = document.getElementById(
+            "product-card-template"
+          );
+
+          try {
+            // Use the existing product fetching function
+            const response = await products.getAll();
+            console.log("Products loaded:", response);
+
+            // Clear loading indicator
+            productGridContainer.innerHTML = "";
+
+            // Handle multiple possible response formats
+            let productList = [];
+
+            // Check response.data.products format (as per API docs)
+            if (
+              response &&
+              response.data &&
+              Array.isArray(response.data.products)
+            ) {
+              productList = response.data.products;
+            }
+            // Check direct response.data array format
+            else if (
+              response &&
+              response.data &&
+              Array.isArray(response.data)
+            ) {
+              productList = response.data;
+            }
+            // Check if response itself is an array
+            else if (Array.isArray(response)) {
+              productList = response;
+            }
+            // Check for successful response with data
+            else if (response && response.code === "SUCCESS" && response.data) {
+              // If data is array, use it directly
+              if (Array.isArray(response.data)) {
+                productList = response.data;
+              }
+              // If data has products array property
+              else if (
+                response.data.products &&
+                Array.isArray(response.data.products)
+              ) {
+                productList = response.data.products;
+              }
+            }
+
+            console.log("Parsed product list:", productList);
+
+            if (productList.length === 0) {
+              productGridContainer.innerHTML = `
+                <div class="col-span-full text-center py-12">
+                  <p class="text-gray-500">No products available at this time. Check back later!</p>
+                </div>
+              `;
+              return;
+            }
+
+            productList.forEach((product) => {
+              // Clone the template
+              const card = productCardTemplate.content.cloneNode(true);
+
+              // Get properties safely with fallbacks
+              const name =
+                product.name || product.product_name || "Unnamed Product";
+              const price = product.price || product.unit_price || 0;
+              const stock =
+                product.stock ||
+                product.inventory_quantity ||
+                product.inventory ||
+                0;
+              const id = product.id || product.product_id || "";
+              const image =
+                product.image ||
+                product.image_url ||
+                "img/product-placeholder.svg";
+
+              // Set product data
+              card.querySelector(".product-name").textContent = name;
+              card.querySelector(".product-price").textContent =
+                formatPrice(price);
+              card.querySelector(
+                ".product-stock"
+              ).textContent = `In stock: ${stock}`;
+
+              // Set image or placeholder
+              const imgElement = card.querySelector(".product-image img");
+              imgElement.src = image;
+              imgElement.alt = name;
+
+              // Add to cart functionality
+              const addButton = card.querySelector(".add-to-cart-btn");
+              addButton.dataset.productId = id; // Store product ID as data attribute
+              addButton.dataset.stock = stock; // Store stock information as data attribute
+              addButton.addEventListener("click", async function () {
+                if (!auth.isLoggedIn()) {
+                  window.location.href = "login.html";
+                  return;
+                }
+
+                // Check stock availability
+                const availableStock =
+                  parseInt(addButton.dataset.stock, 10) || 0;
+                if (availableStock <= 0) {
+                  const errorMsg = document.createElement("div");
+                  errorMsg.className =
+                    "error-message text-red-500 text-xs mt-2";
+                  errorMsg.textContent = "Stok produk habis";
+                  addButton.parentNode.appendChild(errorMsg);
+
+                  // Disable the button
+                  addButton.disabled = true;
+                  addButton.classList.remove(
+                    "bg-blue-600",
+                    "hover:bg-blue-700"
+                  );
+                  addButton.classList.add("bg-gray-400", "cursor-not-allowed");
+
+                  setTimeout(() => {
+                    const errorEl =
+                      addButton.parentNode.querySelector(".error-message");
+                    if (errorEl) errorEl.remove();
+                  }, 3000);
+
+                  return;
+                }
+
+                const originalText = addButton.innerHTML;
+                addButton.innerHTML =
+                  '<i class="fas fa-spinner fa-spin mr-2"></i>Adding...';
+                addButton.disabled = true;
+
+                try {
+                  console.log(`Attempting to add product ID: ${id} to cart`);
+                  const result = await cart.addToCurrentUserCart(id, 1);
+                  console.log("Add to cart success:", result);
+                  addButton.innerHTML =
+                    '<i class="fas fa-check mr-2"></i>Added!';
+
+                  // Decrement displayed stock after successful add
+                  const stockElement = card.querySelector(".product-stock");
+                  if (stockElement) {
+                    const newStock = availableStock - 1;
+                    stockElement.textContent = `In stock: ${newStock}`;
+                    addButton.dataset.stock = newStock;
+
+                    // If stock is now zero, disable the button
+                    if (newStock <= 0) {
+                      setTimeout(() => {
+                        addButton.disabled = true;
+                        addButton.classList.remove(
+                          "bg-blue-600",
+                          "hover:bg-blue-700"
+                        );
+                        addButton.classList.add(
+                          "bg-gray-400",
+                          "cursor-not-allowed"
+                        );
+                        addButton.innerHTML =
+                          '<i class="fas fa-ban mr-2"></i>Out of Stock';
+                      }, 2000);
+                      return;
+                    }
+                  }
+
+                  setTimeout(() => {
+                    addButton.innerHTML = originalText;
+                    addButton.disabled = false;
+                  }, 2000);
+                } catch (error) {
+                  console.error("Error adding to cart:", error);
+                  console.error("Error message:", error.message);
+                  console.error("Error details:", error.stack);
+                  addButton.innerHTML =
+                    '<i class="fas fa-exclamation-circle mr-2"></i>Failed';
+
+                  // Display appropriate error message
+                  let errorMessage = error.message || "Failed to add to cart";
+
+                  // Check if the error is related to stock availability
+                  if (
+                    error.message &&
+                    error.message.includes("enough inventory")
+                  ) {
+                    errorMessage = "Stok produk tidak mencukupi";
+                  }
+
+                  const errorMsg = document.createElement("div");
+                  errorMsg.className =
+                    "error-message text-red-500 text-xs mt-2";
+                  errorMsg.textContent = errorMessage;
+                  addButton.parentNode.appendChild(errorMsg);
+
+                  setTimeout(() => {
+                    addButton.innerHTML = originalText;
+                    addButton.disabled = false;
+                    // Remove error message after delay
+                    const errorEl =
+                      addButton.parentNode.querySelector(".error-message");
+                    if (errorEl) errorEl.remove();
+                  }, 3000);
+                }
+              });
+
+              // Add the card to the grid
+              productGridContainer.appendChild(card);
+            });
+          } catch (error) {
+            console.error("Error loading products:", error);
+            productGridContainer.innerHTML = `
+              <div class="col-span-full text-center py-12">
+                <p class="text-red-500"><i class="fas fa-exclamation-circle mr-2"></i>Failed to load products. Please try again later.</p>
+                <button id="retry-products" class="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+                  <i class="fas fa-sync mr-2"></i>Try Again
+                </button>
+                <div class="mt-4 text-left bg-gray-100 p-4 rounded-md overflow-auto max-h-32 text-xs">
+                  <code>Error: ${error.message || "Unknown error"}</code>
+                </div>
+              </div>
+            `;
+            // Add retry button functionality
+            document
+              .getElementById("retry-products")
+              ?.addEventListener("click", () => {
+                initProductsPage();
+              });
+          }
+        };
+
+        // Call the init function
+        if (typeof products !== "undefined") {
+          initProductsPage();
+        } else {
+          console.error("Products module not loaded");
+        }
+      });
+    </script>
   </body>
 </html>
