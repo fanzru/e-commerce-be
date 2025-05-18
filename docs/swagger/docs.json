@@ -559,7 +559,6 @@
           "Checkout"
         ],
         "summary": "Get checkout by ID",
-        "operationId": "Mixin0",
         "parameters": [
           {
             "type": "string",
@@ -1221,6 +1220,7 @@
           "Order"
         ],
         "summary": "Get user orders",
+        "operationId": "Mixin0",
         "parameters": [
           {
             "type": "string",
