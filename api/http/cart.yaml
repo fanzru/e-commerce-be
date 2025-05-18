@@ -1,0 +1,516 @@
+openapi: 3.0.0
+info:
+  title: Cart API
+  description: Cart management API for e-commerce platform
+  version: 1.0.0
+
+servers:
+  - url: /
+    description: API server
+
+tags:
+  - name: Cart
+    description: Shopping cart operations
+  - name: Cart Items
+    description: Operations for managing items in a cart
+
+paths:
+  /api/v1/carts:
+    post:
+      tags:
+        - Cart
+      operationId: createCart
+      summary: Create a new cart
+      description: Creates a new empty shopping cart
+      security:
+        - BearerAuth: []
+      responses:
+        "201":
+          description: Cart created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CartResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/carts/me:
+    get:
+      tags:
+        - Cart
+      operationId: getCurrentUserCart
+      summary: Get current user's cart
+      description: Retrieves the current authenticated user's cart
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CartResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    post:
+      tags:
+        - Cart Items
+      operationId: addItemToCurrentUserCart
+      summary: Add item to current user's cart
+      description: Adds a new item to the current user's cart or updates quantity if already exists
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                product_id:
+                  type: string
+                  format: uuid
+                  description: ID of the product to add
+                quantity:
+                  type: integer
+                  minimum: 1
+                  description: Quantity to add
+              required:
+                - product_id
+                - quantity
+      responses:
+        "200":
+          description: Item added or updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CartItemResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Cart or product not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/carts/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: Cart ID
+        schema:
+          type: string
+          format: uuid
+
+    get:
+      tags:
+        - Cart
+      operationId: getCart
+      summary: Get cart by ID
+      description: Retrieves a cart by its ID with all items
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CartResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Cart not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    delete:
+      tags:
+        - Cart
+      operationId: deleteCart
+      summary: Delete cart
+      description: Deletes a cart and all its items
+      security:
+        - BearerAuth: []
+      responses:
+        "204":
+          description: Cart deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StandardResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Cart not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/carts/{id}/items:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: Cart ID
+        schema:
+          type: string
+          format: uuid
+
+    post:
+      tags:
+        - Cart Items
+      operationId: addItemToCart
+      summary: Add item to cart
+      description: Adds a new item to the cart or updates quantity if already exists
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                product_id:
+                  type: string
+                  format: uuid
+                  description: ID of the product to add
+                quantity:
+                  type: integer
+                  minimum: 1
+                  description: Quantity to add
+              required:
+                - product_id
+                - quantity
+      responses:
+        "200":
+          description: Item added or updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CartItemResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Cart or product not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/carts/{cartId}/items/{itemId}:
+    parameters:
+      - name: cartId
+        in: path
+        required: true
+        description: Cart ID
+        schema:
+          type: string
+          format: uuid
+      - name: itemId
+        in: path
+        required: true
+        description: Cart Item ID
+        schema:
+          type: string
+          format: uuid
+
+    put:
+      tags:
+        - Cart Items
+      operationId: updateCartItem
+      summary: Update cart item
+      description: Updates the quantity of an item in the cart
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                quantity:
+                  type: integer
+                  minimum: 1
+                  description: New quantity
+              required:
+                - quantity
+      responses:
+        "200":
+          description: Item updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CartItemResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Cart or item not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    delete:
+      tags:
+        - Cart Items
+      operationId: removeCartItem
+      summary: Remove item from cart
+      description: Removes an item from the cart
+      security:
+        - BearerAuth: []
+      responses:
+        "204":
+          description: Item removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StandardResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Cart or item not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    StandardResponse:
+      type: object
+      required:
+        - data
+        - message
+        - code
+        - server_time
+      properties:
+        data:
+          type: object
+          description: Response data payload
+        message:
+          type: string
+          description: Response message
+        code:
+          type: string
+          description: Response code
+        server_time:
+          type: string
+          format: date-time
+          description: Server timestamp
+
+    ErrorResponse:
+      type: object
+      required:
+        - message
+        - code
+        - server_time
+      properties:
+        message:
+          type: string
+          description: Error message
+        code:
+          type: string
+          description: Error code
+        data:
+          type: object
+          description: Additional error data
+          nullable: true
+        server_time:
+          type: string
+          format: date-time
+          description: Server timestamp
+
+    CartResponse:
+      allOf:
+        - $ref: "#/components/schemas/StandardResponse"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/Cart"
+
+    CartItemResponse:
+      allOf:
+        - $ref: "#/components/schemas/StandardResponse"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/CartItem"
+
+    Cart:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CartItem"
+        total_items:
+          type: integer
+        subtotal:
+          type: number
+          format: float
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CartItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Cart item ID
+        cart_id:
+          type: string
+          format: uuid
+          description: Cart ID
+        product_id:
+          type: string
+          format: uuid
+          description: Product ID
+        product_sku:
+          type: string
+          description: Product SKU
+        product_name:
+          type: string
+          description: Product name
+        unit_price:
+          type: number
+          format: float
+          description: Product unit price
+        quantity:
+          type: integer
+          description: Quantity
+        subtotal:
+          type: number
+          format: float
+          description: Item subtotal (unit_price * quantity)
+        created_at:
+          type: string
+          format: date-time
+          description: Creation timestamp
+        updated_at:
+          type: string
+          format: date-time
+          description: Last update timestamp

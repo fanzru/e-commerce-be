@@ -1,0 +1,382 @@
+openapi: 3.0.0
+info:
+  title: Promotion API
+  description: Promotion API for e-commerce platform
+  version: 1.0.0
+
+servers:
+  - url: /
+    description: API server
+
+tags:
+  - name: Promotions
+    description: Promotion management operations
+
+paths:
+  /api/v1/promotions:
+    get:
+      tags:
+        - Promotions
+      operationId: listPromotions
+      summary: List promotions
+      description: Retrieves a paginated list of promotions
+      parameters:
+        - name: page
+          in: query
+          description: Page number
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          description: Number of items per page
+          schema:
+            type: integer
+            default: 10
+        - name: active
+          in: query
+          description: Filter by active status
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PromotionListResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    post:
+      tags:
+        - Promotions
+      operationId: createPromotion
+      summary: Create a new promotion
+      description: Create a new promotion
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PromotionCreate"
+      responses:
+        "201":
+          description: Promotion created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PromotionResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/promotions/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Promotion ID
+
+    get:
+      tags:
+        - Promotions
+      operationId: getPromotion
+      summary: Get promotion by ID
+      description: Retrieves a promotion by its ID
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PromotionResponse"
+        "404":
+          description: Promotion not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    patch:
+      tags:
+        - Promotions
+      operationId: updatePromotionStatus
+      summary: Update promotion status
+      description: Updates a promotion's active status
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                active:
+                  type: boolean
+                  description: Active status
+              required:
+                - active
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PromotionResponse"
+        "404":
+          description: Promotion not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    delete:
+      tags:
+        - Promotions
+      operationId: deletePromotion
+      summary: Delete promotion
+      description: Deletes a promotion by its ID
+      responses:
+        "204":
+          description: Promotion deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StandardResponse"
+        "404":
+          description: Promotion not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  schemas:
+    StandardResponse:
+      type: object
+      required:
+        - data
+        - message
+        - code
+        - server_time
+      properties:
+        data:
+          type: object
+          description: Response data payload
+        message:
+          type: string
+          description: Response message
+        code:
+          type: string
+          description: Response code
+        server_time:
+          type: string
+          format: date-time
+          description: Server timestamp
+
+    ErrorResponse:
+      type: object
+      required:
+        - message
+        - code
+        - server_time
+      properties:
+        message:
+          type: string
+          description: Error message
+        code:
+          type: string
+          description: Error code
+        data:
+          type: object
+          description: Additional error data
+          nullable: true
+        server_time:
+          type: string
+          format: date-time
+          description: Server timestamp
+
+    PromotionListResponse:
+      allOf:
+        - $ref: "#/components/schemas/StandardResponse"
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                promotions:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/Promotion"
+                meta:
+                  $ref: "#/components/schemas/PaginationMeta"
+
+    PromotionResponse:
+      allOf:
+        - $ref: "#/components/schemas/StandardResponse"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/Promotion"
+
+    PaginationMeta:
+      type: object
+      properties:
+        current_page:
+          type: integer
+        per_page:
+          type: integer
+        total:
+          type: integer
+        total_pages:
+          type: integer
+
+    Promotion:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum:
+            - BUY_ONE_GET_ONE_FREE
+            - BUY_3_PAY_2
+            - BULK_DISCOUNT
+        description:
+          type: string
+        active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    PromotionCreate:
+      oneOf:
+        - $ref: "#/components/schemas/BuyOneGetOneFreePromotion"
+        - $ref: "#/components/schemas/Buy3Pay2Promotion"
+        - $ref: "#/components/schemas/BulkDiscountPromotion"
+
+    BuyOneGetOneFreePromotion:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+            - BUY_ONE_GET_ONE_FREE
+        description:
+          type: string
+        active:
+          type: boolean
+        trigger_sku:
+          type: string
+        free_sku:
+          type: string
+        trigger_quantity:
+          type: integer
+          minimum: 1
+        free_quantity:
+          type: integer
+          minimum: 1
+      required:
+        - type
+        - description
+        - trigger_sku
+        - free_sku
+        - trigger_quantity
+        - free_quantity
+
+    Buy3Pay2Promotion:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+            - BUY_3_PAY_2
+        description:
+          type: string
+        active:
+          type: boolean
+        sku:
+          type: string
+        min_quantity:
+          type: integer
+          minimum: 1
+        paid_quantity_divisor:
+          type: integer
+          minimum: 1
+        free_quantity_divisor:
+          type: integer
+          minimum: 1
+      required:
+        - type
+        - description
+        - sku
+        - min_quantity
+        - paid_quantity_divisor
+        - free_quantity_divisor
+
+    BulkDiscountPromotion:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+            - BULK_DISCOUNT
+        description:
+          type: string
+        active:
+          type: boolean
+        sku:
+          type: string
+        min_quantity:
+          type: integer
+          minimum: 1
+        discount_percentage:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 100
+      required:
+        - type
+        - description
+        - sku
+        - min_quantity
+        - discount_percentage

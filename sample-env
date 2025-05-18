@@ -1,0 +1,28 @@
+# Server configuration
+SERVER_PORT=8080
+
+# Database configuration
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=anandafattahila
+DB_PASSWORD=
+DB_NAME=ecommerce
+DB_MAX_OPEN_CONNS=25
+DB_MAX_IDLE_CONNS=5
+DB_CONN_MAX_LIFETIME_MINUTES=30
+
+# Logging
+LOG_LEVEL=info
+LOG_FORMAT=json    # json or text
+
+# OpenTelemetry Configuration
+OTEL_ENABLED=false
+OTEL_SERVICE_NAME=e-commerce-api
+OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
+
+# Application
+APP_ENV=development
+
+# JWT Configuration
+JWT_SECRET_KEY=your-secret-key-change-in-production
+JWT_EXPIRATION_HOURS=24

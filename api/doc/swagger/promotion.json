@@ -1,0 +1,504 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "description": "Promotion API for e-commerce platform",
+    "title": "Promotion API",
+    "version": "1.0.0"
+  },
+  "basePath": "/",
+  "paths": {
+    "/api/v1/promotions": {
+      "get": {
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "default": 1,
+            "description": "Page number",
+            "in": "query",
+            "name": "page",
+            "type": "integer"
+          },
+          {
+            "default": 10,
+            "description": "Number of items per page",
+            "in": "query",
+            "name": "limit",
+            "type": "integer"
+          },
+          {
+            "description": "Filter by active status",
+            "in": "query",
+            "name": "active",
+            "type": "boolean"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/PromotionListResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        },
+        "tags": [
+          "Promotions"
+        ],
+        "description": "Retrieves a paginated list of promotions",
+        "operationId": "listPromotions",
+        "summary": "List promotions"
+      },
+      "post": {
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/PromotionCreate"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Promotion created",
+            "schema": {
+              "$ref": "#/definitions/PromotionResponse"
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        },
+        "tags": [
+          "Promotions"
+        ],
+        "description": "Create a new promotion",
+        "operationId": "createPromotion",
+        "summary": "Create a new promotion"
+      }
+    },
+    "/api/v1/promotions/{id}": {
+      "parameters": [
+        {
+          "description": "Promotion ID",
+          "format": "uuid",
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "delete": {
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": "Promotion deleted",
+            "schema": {
+              "$ref": "#/definitions/StandardResponse"
+            }
+          },
+          "404": {
+            "description": "Promotion not found",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        },
+        "tags": [
+          "Promotions"
+        ],
+        "description": "Deletes a promotion by its ID",
+        "operationId": "deletePromotion",
+        "summary": "Delete promotion"
+      },
+      "get": {
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/PromotionResponse"
+            }
+          },
+          "404": {
+            "description": "Promotion not found",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        },
+        "tags": [
+          "Promotions"
+        ],
+        "description": "Retrieves a promotion by its ID",
+        "operationId": "getPromotion",
+        "summary": "Get promotion by ID"
+      },
+      "patch": {
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "properties": {
+                "active": {
+                  "description": "Active status",
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "active"
+              ],
+              "type": "object"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/PromotionResponse"
+            }
+          },
+          "404": {
+            "description": "Promotion not found",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        },
+        "tags": [
+          "Promotions"
+        ],
+        "description": "Updates a promotion's active status",
+        "operationId": "updatePromotionStatus",
+        "summary": "Update promotion status"
+      }
+    }
+  },
+  "definitions": {
+    "BulkDiscountPromotion": {
+      "properties": {
+        "active": {
+          "type": "boolean"
+        },
+        "description": {
+          "type": "string"
+        },
+        "discount_percentage": {
+          "format": "float",
+          "maximum": 100,
+          "minimum": 0,
+          "type": "number"
+        },
+        "min_quantity": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "sku": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "BULK_DISCOUNT"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "description",
+        "sku",
+        "min_quantity",
+        "discount_percentage"
+      ],
+      "type": "object"
+    },
+    "Buy3Pay2Promotion": {
+      "properties": {
+        "active": {
+          "type": "boolean"
+        },
+        "description": {
+          "type": "string"
+        },
+        "free_quantity_divisor": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "min_quantity": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "paid_quantity_divisor": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "sku": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "BUY_3_PAY_2"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "description",
+        "sku",
+        "min_quantity",
+        "paid_quantity_divisor",
+        "free_quantity_divisor"
+      ],
+      "type": "object"
+    },
+    "BuyOneGetOneFreePromotion": {
+      "properties": {
+        "active": {
+          "type": "boolean"
+        },
+        "description": {
+          "type": "string"
+        },
+        "free_quantity": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "free_sku": {
+          "type": "string"
+        },
+        "trigger_quantity": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "trigger_sku": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "BUY_ONE_GET_ONE_FREE"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "description",
+        "trigger_sku",
+        "free_sku",
+        "trigger_quantity",
+        "free_quantity"
+      ],
+      "type": "object"
+    },
+    "ErrorResponse": {
+      "properties": {
+        "code": {
+          "description": "Error code",
+          "type": "string"
+        },
+        "data": {
+          "description": "Additional error data",
+          "type": "object",
+          "x-nullable": true
+        },
+        "message": {
+          "description": "Error message",
+          "type": "string"
+        },
+        "server_time": {
+          "description": "Server timestamp",
+          "format": "date-time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "message",
+        "code",
+        "server_time"
+      ],
+      "type": "object"
+    },
+    "PaginationMeta": {
+      "properties": {
+        "current_page": {
+          "type": "integer"
+        },
+        "per_page": {
+          "type": "integer"
+        },
+        "total": {
+          "type": "integer"
+        },
+        "total_pages": {
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "Promotion": {
+      "properties": {
+        "active": {
+          "type": "boolean"
+        },
+        "created_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "BUY_ONE_GET_ONE_FREE",
+            "BUY_3_PAY_2",
+            "BULK_DISCOUNT"
+          ],
+          "type": "string"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "PromotionCreate": {},
+    "PromotionListResponse": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/StandardResponse"
+        },
+        {
+          "properties": {
+            "data": {
+              "properties": {
+                "meta": {
+                  "$ref": "#/definitions/PaginationMeta"
+                },
+                "promotions": {
+                  "items": {
+                    "$ref": "#/definitions/Promotion"
+                  },
+                  "type": "array"
+                }
+              },
+              "type": "object"
+            }
+          },
+          "type": "object"
+        }
+      ]
+    },
+    "PromotionResponse": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/StandardResponse"
+        },
+        {
+          "properties": {
+            "data": {
+              "$ref": "#/definitions/Promotion"
+            }
+          },
+          "type": "object"
+        }
+      ]
+    },
+    "StandardResponse": {
+      "properties": {
+        "code": {
+          "description": "Response code",
+          "type": "string"
+        },
+        "data": {
+          "description": "Response data payload",
+          "type": "object"
+        },
+        "message": {
+          "description": "Response message",
+          "type": "string"
+        },
+        "server_time": {
+          "description": "Server timestamp",
+          "format": "date-time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "data",
+        "message",
+        "code",
+        "server_time"
+      ],
+      "type": "object"
+    }
+  },
+  "tags": [
+    {
+      "description": "Promotion management operations",
+      "name": "Promotions"
+    }
+  ],
+  "x-components": {}
+}

@@ -1,0 +1,348 @@
+openapi: 3.0.0
+info:
+  title: Product API
+  description: API for managing products
+  version: 1.0.0
+
+servers:
+  - url: /
+    description: API v1
+
+tags:
+  - name: Products
+    description: Product management operations
+
+paths:
+  /api/v1/products:
+    get:
+      tags:
+        - Products
+      operationId: listProducts
+      summary: List products
+      description: Returns a list of products with pagination
+      parameters:
+        - name: page
+          in: query
+          description: Page number for pagination
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          description: Number of items per page
+          schema:
+            type: integer
+            default: 10
+        - name: sku
+          in: query
+          description: Filter by SKU
+          schema:
+            type: string
+        - name: name
+          in: query
+          description: Filter by name
+          schema:
+            type: string
+      responses:
+        "200":
+          description: A list of products
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductListResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    post:
+      tags:
+        - Products
+      operationId: createProduct
+      summary: Create a product
+      description: Creates a new product in the system
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProductParams"
+      responses:
+        "201":
+          description: Product created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/products/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: Product ID
+        schema:
+          type: string
+          format: uuid
+
+    get:
+      tags:
+        - Products
+      operationId: getProduct
+      summary: Get product by ID
+      description: Returns a product by its UUID
+      responses:
+        "200":
+          description: Product details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductResponse"
+        "404":
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    put:
+      tags:
+        - Products
+      operationId: updateProduct
+      summary: Update product
+      description: Updates an existing product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Product ID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProductParams"
+      responses:
+        "200":
+          description: Product updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    delete:
+      tags:
+        - Products
+      operationId: deleteProduct
+      summary: Delete product
+      description: Deletes a product from the system
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Product ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Product deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StandardResponse"
+        "404":
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  schemas:
+    StandardResponse:
+      type: object
+      required:
+        - data
+        - message
+        - code
+        - server_time
+      properties:
+        data:
+          type: object
+          description: Response data payload
+        message:
+          type: string
+          description: Response message
+        code:
+          type: string
+          description: Response code
+        server_time:
+          type: string
+          format: date-time
+          description: Server timestamp
+
+    ProductResponse:
+      allOf:
+        - $ref: "#/components/schemas/StandardResponse"
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                  description: Product ID
+                sku:
+                  type: string
+                  description: Product SKU
+                name:
+                  type: string
+                  description: Product name
+                price:
+                  type: number
+                  format: float
+                  description: Product price
+                inventory:
+                  type: integer
+                  description: Available inventory
+
+    ProductListResponse:
+      allOf:
+        - $ref: "#/components/schemas/StandardResponse"
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                products:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                        description: Product ID
+                      sku:
+                        type: string
+                        description: Product SKU
+                      name:
+                        type: string
+                        description: Product name
+                      price:
+                        type: number
+                        format: float
+                        description: Product price
+                      inventory:
+                        type: integer
+                        description: Available inventory
+                total:
+                  type: integer
+                  description: Total number of products
+
+    CreateProductParams:
+      type: object
+      required:
+        - sku
+        - name
+        - price
+        - inventory
+      properties:
+        sku:
+          type: string
+          description: Product SKU
+        name:
+          type: string
+          description: Product name
+        price:
+          type: number
+          format: float
+          description: Product price
+        inventory:
+          type: integer
+          description: Available inventory
+
+    UpdateProductParams:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Product name
+        price:
+          type: number
+          format: float
+          description: Product price
+        inventory:
+          type: integer
+          description: Available inventory
+
+    ErrorResponse:
+      type: object
+      required:
+        - message
+        - code
+        - server_time
+      properties:
+        message:
+          type: string
+          description: Error message
+        code:
+          type: string
+          description: Error code
+        data:
+          type: object
+          description: Additional error data
+          nullable: true
+        server_time:
+          type: string
+          format: date-time
+          description: Server timestamp

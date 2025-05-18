@@ -1,0 +1,454 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "description": "API for managing products",
+    "title": "Product API",
+    "version": "1.0.0"
+  },
+  "basePath": "/",
+  "paths": {
+    "/api/v1/products": {
+      "get": {
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "default": 1,
+            "description": "Page number for pagination",
+            "in": "query",
+            "name": "page",
+            "type": "integer"
+          },
+          {
+            "default": 10,
+            "description": "Number of items per page",
+            "in": "query",
+            "name": "limit",
+            "type": "integer"
+          },
+          {
+            "description": "Filter by SKU",
+            "in": "query",
+            "name": "sku",
+            "type": "string"
+          },
+          {
+            "description": "Filter by name",
+            "in": "query",
+            "name": "name",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A list of products",
+            "schema": {
+              "$ref": "#/definitions/ProductListResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        },
+        "tags": [
+          "Products"
+        ],
+        "description": "Returns a list of products with pagination",
+        "operationId": "listProducts",
+        "summary": "List products"
+      },
+      "post": {
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CreateProductParams"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Product created",
+            "schema": {
+              "$ref": "#/definitions/ProductResponse"
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        },
+        "tags": [
+          "Products"
+        ],
+        "description": "Creates a new product in the system",
+        "operationId": "createProduct",
+        "summary": "Create a product"
+      }
+    },
+    "/api/v1/products/{id}": {
+      "parameters": [
+        {
+          "description": "Product ID",
+          "format": "uuid",
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "delete": {
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "description": "Product ID",
+            "format": "uuid",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Product deleted",
+            "schema": {
+              "$ref": "#/definitions/StandardResponse"
+            }
+          },
+          "404": {
+            "description": "Product not found",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        },
+        "tags": [
+          "Products"
+        ],
+        "description": "Deletes a product from the system",
+        "operationId": "deleteProduct",
+        "summary": "Delete product"
+      },
+      "get": {
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Product details",
+            "schema": {
+              "$ref": "#/definitions/ProductResponse"
+            }
+          },
+          "404": {
+            "description": "Product not found",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        },
+        "tags": [
+          "Products"
+        ],
+        "description": "Returns a product by its UUID",
+        "operationId": "getProduct",
+        "summary": "Get product by ID"
+      },
+      "put": {
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "description": "Product ID",
+            "format": "uuid",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/UpdateProductParams"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Product updated",
+            "schema": {
+              "$ref": "#/definitions/ProductResponse"
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "404": {
+            "description": "Product not found",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        },
+        "tags": [
+          "Products"
+        ],
+        "description": "Updates an existing product",
+        "operationId": "updateProduct",
+        "summary": "Update product"
+      }
+    }
+  },
+  "definitions": {
+    "CreateProductParams": {
+      "properties": {
+        "inventory": {
+          "description": "Available inventory",
+          "type": "integer"
+        },
+        "name": {
+          "description": "Product name",
+          "type": "string"
+        },
+        "price": {
+          "description": "Product price",
+          "format": "float",
+          "type": "number"
+        },
+        "sku": {
+          "description": "Product SKU",
+          "type": "string"
+        }
+      },
+      "required": [
+        "sku",
+        "name",
+        "price",
+        "inventory"
+      ],
+      "type": "object"
+    },
+    "ErrorResponse": {
+      "properties": {
+        "code": {
+          "description": "Error code",
+          "type": "string"
+        },
+        "data": {
+          "description": "Additional error data",
+          "type": "object",
+          "x-nullable": true
+        },
+        "message": {
+          "description": "Error message",
+          "type": "string"
+        },
+        "server_time": {
+          "description": "Server timestamp",
+          "format": "date-time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "message",
+        "code",
+        "server_time"
+      ],
+      "type": "object"
+    },
+    "ProductListResponse": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/StandardResponse"
+        },
+        {
+          "properties": {
+            "data": {
+              "properties": {
+                "products": {
+                  "items": {
+                    "properties": {
+                      "id": {
+                        "description": "Product ID",
+                        "format": "uuid",
+                        "type": "string"
+                      },
+                      "inventory": {
+                        "description": "Available inventory",
+                        "type": "integer"
+                      },
+                      "name": {
+                        "description": "Product name",
+                        "type": "string"
+                      },
+                      "price": {
+                        "description": "Product price",
+                        "format": "float",
+                        "type": "number"
+                      },
+                      "sku": {
+                        "description": "Product SKU",
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "total": {
+                  "description": "Total number of products",
+                  "type": "integer"
+                }
+              },
+              "type": "object"
+            }
+          },
+          "type": "object"
+        }
+      ]
+    },
+    "ProductResponse": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/StandardResponse"
+        },
+        {
+          "properties": {
+            "data": {
+              "properties": {
+                "id": {
+                  "description": "Product ID",
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "inventory": {
+                  "description": "Available inventory",
+                  "type": "integer"
+                },
+                "name": {
+                  "description": "Product name",
+                  "type": "string"
+                },
+                "price": {
+                  "description": "Product price",
+                  "format": "float",
+                  "type": "number"
+                },
+                "sku": {
+                  "description": "Product SKU",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            }
+          },
+          "type": "object"
+        }
+      ]
+    },
+    "StandardResponse": {
+      "properties": {
+        "code": {
+          "description": "Response code",
+          "type": "string"
+        },
+        "data": {
+          "description": "Response data payload",
+          "type": "object"
+        },
+        "message": {
+          "description": "Response message",
+          "type": "string"
+        },
+        "server_time": {
+          "description": "Server timestamp",
+          "format": "date-time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "data",
+        "message",
+        "code",
+        "server_time"
+      ],
+      "type": "object"
+    },
+    "UpdateProductParams": {
+      "properties": {
+        "inventory": {
+          "description": "Available inventory",
+          "type": "integer"
+        },
+        "name": {
+          "description": "Product name",
+          "type": "string"
+        },
+        "price": {
+          "description": "Product price",
+          "format": "float",
+          "type": "number"
+        }
+      },
+      "type": "object"
+    }
+  },
+  "tags": [
+    {
+      "description": "Product management operations",
+      "name": "Products"
+    }
+  ],
+  "x-components": {}
+}

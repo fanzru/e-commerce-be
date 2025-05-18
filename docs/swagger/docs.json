@@ -1,0 +1,2537 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "description": "Cart management API for e-commerce platform",
+    "title": "Cart API",
+    "version": "1.0.0"
+  },
+  "basePath": "/",
+  "paths": {
+    "/api/v1/auth/login": {
+      "post": {
+        "description": "Authenticates a user and returns a token pair",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Login a user",
+        "operationId": "loginUser",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/LoginUserParams"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Login successful",
+            "schema": {
+              "$ref": "#/definitions/TokenResponse"
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "401": {
+            "description": "Invalid credentials",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "description": "Invalidates the refresh token",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Logout a user",
+        "operationId": "logoutUser",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "required": [
+                "refresh_token"
+              ],
+              "properties": {
+                "refresh_token": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Logged out successfully"
+          },
+          "400": {
+            "description": "Invalid input",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "description": "Refreshes the access token using a refresh token",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Refresh access token",
+        "operationId": "refreshToken",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "required": [
+                "refresh_token"
+              ],
+              "properties": {
+                "refresh_token": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Token refreshed successfully",
+            "schema": {
+              "$ref": "#/definitions/TokenResponse"
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "401": {
+            "description": "Invalid or expired token",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/register": {
+      "post": {
+        "description": "Creates a new user account",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Register a new user",
+        "operationId": "registerUser",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/RegisterUserParams"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "User registered successfully",
+            "schema": {
+              "$ref": "#/definitions/UserResponse"
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "409": {
+            "description": "Email already exists",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/carts": {
+      "post": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Creates a new empty shopping cart",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Cart"
+        ],
+        "summary": "Create a new cart",
+        "operationId": "createCart",
+        "responses": {
+          "201": {
+            "description": "Cart created",
+            "schema": {
+              "$ref": "#/definitions/CartResponse"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/carts/me": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Retrieves the current authenticated user's cart",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Cart"
+        ],
+        "summary": "Get current user's cart",
+        "operationId": "getCurrentUserCart",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/CartResponse"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      },
+      "post": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Adds a new item to the current user's cart or updates quantity if already exists",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Cart Items"
+        ],
+        "summary": "Add item to current user's cart",
+        "operationId": "addItemToCurrentUserCart",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "required": [
+                "product_id",
+                "quantity"
+              ],
+              "properties": {
+                "product_id": {
+                  "description": "ID of the product to add",
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "quantity": {
+                  "description": "Quantity to add",
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Item added or updated",
+            "schema": {
+              "$ref": "#/definitions/CartItemResponse"
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "404": {
+            "description": "Cart or product not found",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/carts/{cartId}/items/{itemId}": {
+      "put": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Updates the quantity of an item in the cart",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Cart Items"
+        ],
+        "summary": "Update cart item",
+        "operationId": "updateCartItem",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "required": [
+                "quantity"
+              ],
+              "properties": {
+                "quantity": {
+                  "description": "New quantity",
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Item updated",
+            "schema": {
+              "$ref": "#/definitions/CartItemResponse"
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "404": {
+            "description": "Cart or item not found",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      },
+      "delete": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Removes an item from the cart",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Cart Items"
+        ],
+        "summary": "Remove item from cart",
+        "operationId": "removeCartItem",
+        "responses": {
+          "204": {
+            "description": "Item removed",
+            "schema": {
+              "$ref": "#/definitions/StandardResponse"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "404": {
+            "description": "Cart or item not found",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      },
+      "parameters": [
+        {
+          "type": "string",
+          "format": "uuid",
+          "description": "Cart ID",
+          "name": "cartId",
+          "in": "path",
+          "required": true
+        },
+        {
+          "type": "string",
+          "format": "uuid",
+          "description": "Cart Item ID",
+          "name": "itemId",
+          "in": "path",
+          "required": true
+        }
+      ]
+    },
+    "/api/v1/carts/{id}": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Retrieves a cart by its ID with all items",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Cart"
+        ],
+        "summary": "Get cart by ID",
+        "operationId": "getCart",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/CartResponse"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "404": {
+            "description": "Cart not found",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      },
+      "delete": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Deletes a cart and all its items",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Cart"
+        ],
+        "summary": "Delete cart",
+        "operationId": "deleteCart",
+        "responses": {
+          "204": {
+            "description": "Cart deleted",
+            "schema": {
+              "$ref": "#/definitions/StandardResponse"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "404": {
+            "description": "Cart not found",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      },
+      "parameters": [
+        {
+          "type": "string",
+          "format": "uuid",
+          "description": "Cart ID",
+          "name": "id",
+          "in": "path",
+          "required": true
+        }
+      ]
+    },
+    "/api/v1/carts/{id}/items": {
+      "post": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Adds a new item to the cart or updates quantity if already exists",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Cart Items"
+        ],
+        "summary": "Add item to cart",
+        "operationId": "addItemToCart",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "required": [
+                "product_id",
+                "quantity"
+              ],
+              "properties": {
+                "product_id": {
+                  "description": "ID of the product to add",
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "quantity": {
+                  "description": "Quantity to add",
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Item added or updated",
+            "schema": {
+              "$ref": "#/definitions/CartItemResponse"
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "404": {
+            "description": "Cart or product not found",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      },
+      "parameters": [
+        {
+          "type": "string",
+          "format": "uuid",
+          "description": "Cart ID",
+          "name": "id",
+          "in": "path",
+          "required": true
+        }
+      ]
+    },
+    "/api/v1/checkouts": {
+      "get": {
+        "description": "Retrieves a paginated list of checkouts",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Checkout"
+        ],
+        "summary": "List checkouts",
+        "parameters": [
+          {
+            "type": "integer",
+            "default": 1,
+            "description": "Page number",
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "default": 10,
+            "description": "Number of items per page",
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/CheckoutListResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      },
+      "post": {
+        "description": "Process cart and create a checkout",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Checkout"
+        ],
+        "summary": "Create a new checkout",
+        "operationId": "Mixin0",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "required": [
+                "cart_id"
+              ],
+              "properties": {
+                "cart_id": {
+                  "description": "ID of the cart to checkout",
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Checkout created",
+            "schema": {
+              "$ref": "#/definitions/CheckoutResponse"
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "404": {
+            "description": "Cart not found",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "409": {
+            "description": "Cart already checked out",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/checkouts/{id}": {
+      "get": {
+        "description": "Retrieves a checkout by its ID",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Checkout"
+        ],
+        "summary": "Get checkout by ID",
+        "operationId": "Mixin0",
+        "parameters": [
+          {
+            "type": "string",
+            "format": "uuid",
+            "description": "Checkout ID",
+            "name": "id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/CheckoutResponse"
+            }
+          },
+          "404": {
+            "description": "Checkout not found",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/products": {
+      "get": {
+        "description": "Returns a list of products with pagination",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Products"
+        ],
+        "summary": "List products",
+        "operationId": "listProducts",
+        "parameters": [
+          {
+            "type": "integer",
+            "default": 1,
+            "description": "Page number for pagination",
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "default": 10,
+            "description": "Number of items per page",
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "description": "Filter by SKU",
+            "name": "sku",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "description": "Filter by name",
+            "name": "name",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A list of products",
+            "schema": {
+              "$ref": "#/definitions/ProductListResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      },
+      "post": {
+        "description": "Creates a new product in the system",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Products"
+        ],
+        "summary": "Create a product",
+        "operationId": "createProduct",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CreateProductParams"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Product created",
+            "schema": {
+              "$ref": "#/definitions/ProductResponse"
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/products/{id}": {
+      "get": {
+        "description": "Returns a product by its UUID",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Products"
+        ],
+        "summary": "Get product by ID",
+        "operationId": "getProduct",
+        "responses": {
+          "200": {
+            "description": "Product details",
+            "schema": {
+              "$ref": "#/definitions/ProductResponse"
+            }
+          },
+          "404": {
+            "description": "Product not found",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      },
+      "put": {
+        "description": "Updates an existing product",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Products"
+        ],
+        "summary": "Update product",
+        "operationId": "updateProduct",
+        "parameters": [
+          {
+            "type": "string",
+            "format": "uuid",
+            "description": "Product ID",
+            "name": "id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/UpdateProductParams"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Product updated",
+            "schema": {
+              "$ref": "#/definitions/ProductResponse"
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "404": {
+            "description": "Product not found",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      },
+      "delete": {
+        "description": "Deletes a product from the system",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Products"
+        ],
+        "summary": "Delete product",
+        "operationId": "deleteProduct",
+        "parameters": [
+          {
+            "type": "string",
+            "format": "uuid",
+            "description": "Product ID",
+            "name": "id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Product deleted",
+            "schema": {
+              "$ref": "#/definitions/StandardResponse"
+            }
+          },
+          "404": {
+            "description": "Product not found",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      },
+      "parameters": [
+        {
+          "type": "string",
+          "format": "uuid",
+          "description": "Product ID",
+          "name": "id",
+          "in": "path",
+          "required": true
+        }
+      ]
+    },
+    "/api/v1/promotions": {
+      "get": {
+        "description": "Retrieves a paginated list of promotions",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Promotions"
+        ],
+        "summary": "List promotions",
+        "operationId": "listPromotions",
+        "parameters": [
+          {
+            "type": "integer",
+            "default": 1,
+            "description": "Page number",
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "default": 10,
+            "description": "Number of items per page",
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "type": "boolean",
+            "description": "Filter by active status",
+            "name": "active",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/PromotionListResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      },
+      "post": {
+        "description": "Create a new promotion",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Promotions"
+        ],
+        "summary": "Create a new promotion",
+        "operationId": "createPromotion",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/PromotionCreate"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Promotion created",
+            "schema": {
+              "$ref": "#/definitions/PromotionResponse"
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/promotions/{id}": {
+      "get": {
+        "description": "Retrieves a promotion by its ID",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Promotions"
+        ],
+        "summary": "Get promotion by ID",
+        "operationId": "getPromotion",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/PromotionResponse"
+            }
+          },
+          "404": {
+            "description": "Promotion not found",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      },
+      "delete": {
+        "description": "Deletes a promotion by its ID",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Promotions"
+        ],
+        "summary": "Delete promotion",
+        "operationId": "deletePromotion",
+        "responses": {
+          "204": {
+            "description": "Promotion deleted",
+            "schema": {
+              "$ref": "#/definitions/StandardResponse"
+            }
+          },
+          "404": {
+            "description": "Promotion not found",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      },
+      "patch": {
+        "description": "Updates a promotion's active status",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Promotions"
+        ],
+        "summary": "Update promotion status",
+        "operationId": "updatePromotionStatus",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "required": [
+                "active"
+              ],
+              "properties": {
+                "active": {
+                  "description": "Active status",
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/PromotionResponse"
+            }
+          },
+          "404": {
+            "description": "Promotion not found",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      },
+      "parameters": [
+        {
+          "type": "string",
+          "format": "uuid",
+          "description": "Promotion ID",
+          "name": "id",
+          "in": "path",
+          "required": true
+        }
+      ]
+    },
+    "/api/v1/users": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Returns a list of users with pagination",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Users"
+        ],
+        "summary": "List users",
+        "operationId": "listUsers",
+        "parameters": [
+          {
+            "type": "integer",
+            "default": 1,
+            "description": "Page number for pagination",
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "default": 10,
+            "description": "Number of items per page",
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "description": "Filter by user role",
+            "name": "role",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A list of users",
+            "schema": {
+              "$ref": "#/definitions/UserListResponse"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/{id}": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Returns a user by its UUID",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Users"
+        ],
+        "summary": "Get user by ID",
+        "operationId": "getUser",
+        "responses": {
+          "200": {
+            "description": "User details",
+            "schema": {
+              "$ref": "#/definitions/UserResponse"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "404": {
+            "description": "User not found",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      },
+      "delete": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Deletes a user (soft delete)",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Users"
+        ],
+        "summary": "Delete user",
+        "operationId": "deleteUser",
+        "responses": {
+          "204": {
+            "description": "User deleted successfully"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "404": {
+            "description": "User not found",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      },
+      "patch": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Updates a user's details",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Users"
+        ],
+        "summary": "Update user",
+        "operationId": "updateUser",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/UpdateUserParams"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User updated successfully",
+            "schema": {
+              "$ref": "#/definitions/UserResponse"
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "404": {
+            "description": "User not found",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      },
+      "parameters": [
+        {
+          "type": "string",
+          "format": "uuid",
+          "description": "User ID",
+          "name": "id",
+          "in": "path",
+          "required": true
+        }
+      ]
+    },
+    "/api/v1/users/{id}/password": {
+      "put": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Updates a user's password",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Users"
+        ],
+        "summary": "Update password",
+        "operationId": "updatePassword",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/UpdatePasswordParams"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Password updated successfully"
+          },
+          "400": {
+            "description": "Invalid input",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "401": {
+            "description": "Unauthorized or invalid current password",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "404": {
+            "description": "User not found",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      },
+      "parameters": [
+        {
+          "type": "string",
+          "format": "uuid",
+          "description": "User ID",
+          "name": "id",
+          "in": "path",
+          "required": true
+        }
+      ]
+    }
+  },
+  "definitions": {
+    "BulkDiscountPromotion": {
+      "type": "object",
+      "required": [
+        "type",
+        "description",
+        "sku",
+        "min_quantity",
+        "discount_percentage"
+      ],
+      "properties": {
+        "active": {
+          "type": "boolean"
+        },
+        "description": {
+          "type": "string"
+        },
+        "discount_percentage": {
+          "type": "number",
+          "format": "float",
+          "maximum": 100,
+          "minimum": 0
+        },
+        "min_quantity": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "sku": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "BULK_DISCOUNT"
+          ]
+        }
+      }
+    },
+    "Buy3Pay2Promotion": {
+      "type": "object",
+      "required": [
+        "type",
+        "description",
+        "sku",
+        "min_quantity",
+        "paid_quantity_divisor",
+        "free_quantity_divisor"
+      ],
+      "properties": {
+        "active": {
+          "type": "boolean"
+        },
+        "description": {
+          "type": "string"
+        },
+        "free_quantity_divisor": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "min_quantity": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "paid_quantity_divisor": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "sku": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "BUY_3_PAY_2"
+          ]
+        }
+      }
+    },
+    "BuyOneGetOneFreePromotion": {
+      "type": "object",
+      "required": [
+        "type",
+        "description",
+        "trigger_sku",
+        "free_sku",
+        "trigger_quantity",
+        "free_quantity"
+      ],
+      "properties": {
+        "active": {
+          "type": "boolean"
+        },
+        "description": {
+          "type": "string"
+        },
+        "free_quantity": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "free_sku": {
+          "type": "string"
+        },
+        "trigger_quantity": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "trigger_sku": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "BUY_ONE_GET_ONE_FREE"
+          ]
+        }
+      }
+    },
+    "Cart": {
+      "type": "object",
+      "properties": {
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/CartItem"
+          }
+        },
+        "subtotal": {
+          "type": "number",
+          "format": "float"
+        },
+        "total_items": {
+          "type": "integer"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "user_id": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    },
+    "CartItem": {
+      "type": "object",
+      "properties": {
+        "cart_id": {
+          "description": "Cart ID",
+          "type": "string",
+          "format": "uuid"
+        },
+        "created_at": {
+          "description": "Creation timestamp",
+          "type": "string",
+          "format": "date-time"
+        },
+        "id": {
+          "description": "Cart item ID",
+          "type": "string",
+          "format": "uuid"
+        },
+        "product_id": {
+          "description": "Product ID",
+          "type": "string",
+          "format": "uuid"
+        },
+        "product_name": {
+          "description": "Product name",
+          "type": "string"
+        },
+        "product_sku": {
+          "description": "Product SKU",
+          "type": "string"
+        },
+        "quantity": {
+          "description": "Quantity",
+          "type": "integer"
+        },
+        "subtotal": {
+          "description": "Item subtotal (unit_price * quantity)",
+          "type": "number",
+          "format": "float"
+        },
+        "unit_price": {
+          "description": "Product unit price",
+          "type": "number",
+          "format": "float"
+        },
+        "updated_at": {
+          "description": "Last update timestamp",
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "CartItemResponse": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/StandardResponse"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "data": {
+              "$ref": "#/definitions/CartItem"
+            }
+          }
+        }
+      ]
+    },
+    "CartResponse": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/StandardResponse"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "data": {
+              "$ref": "#/definitions/Cart"
+            }
+          }
+        }
+      ]
+    },
+    "Checkout": {
+      "type": "object",
+      "properties": {
+        "cart_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/CheckoutItem"
+          }
+        },
+        "promotions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PromotionApplied"
+          }
+        },
+        "subtotal": {
+          "type": "number",
+          "format": "float"
+        },
+        "total": {
+          "type": "number",
+          "format": "float"
+        },
+        "total_discount": {
+          "type": "number",
+          "format": "float"
+        }
+      }
+    },
+    "CheckoutItem": {
+      "type": "object",
+      "properties": {
+        "checkout_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "discount": {
+          "type": "number",
+          "format": "float"
+        },
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "product_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "product_name": {
+          "type": "string"
+        },
+        "product_sku": {
+          "type": "string"
+        },
+        "quantity": {
+          "type": "integer"
+        },
+        "subtotal": {
+          "type": "number",
+          "format": "float"
+        },
+        "total": {
+          "type": "number",
+          "format": "float"
+        },
+        "unit_price": {
+          "type": "number",
+          "format": "float"
+        }
+      }
+    },
+    "CheckoutListResponse": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/StandardResponse"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "data": {
+              "type": "object",
+              "properties": {
+                "checkouts": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/CheckoutSummary"
+                  }
+                },
+                "meta": {
+                  "$ref": "#/definitions/PaginationMeta"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "CheckoutResponse": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/StandardResponse"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "data": {
+              "$ref": "#/definitions/Checkout"
+            }
+          }
+        }
+      ]
+    },
+    "CheckoutSummary": {
+      "type": "object",
+      "properties": {
+        "cart_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "subtotal": {
+          "type": "number",
+          "format": "float"
+        },
+        "total": {
+          "type": "number",
+          "format": "float"
+        },
+        "total_discount": {
+          "type": "number",
+          "format": "float"
+        }
+      }
+    },
+    "CreateProductParams": {
+      "type": "object",
+      "required": [
+        "sku",
+        "name",
+        "price",
+        "inventory"
+      ],
+      "properties": {
+        "inventory": {
+          "description": "Available inventory",
+          "type": "integer"
+        },
+        "name": {
+          "description": "Product name",
+          "type": "string"
+        },
+        "price": {
+          "description": "Product price",
+          "type": "number",
+          "format": "float"
+        },
+        "sku": {
+          "description": "Product SKU",
+          "type": "string"
+        }
+      }
+    },
+    "ErrorResponse": {
+      "type": "object",
+      "required": [
+        "message",
+        "code",
+        "server_time"
+      ],
+      "properties": {
+        "code": {
+          "description": "Error code",
+          "type": "string"
+        },
+        "data": {
+          "description": "Additional error data",
+          "type": "object",
+          "x-nullable": true
+        },
+        "message": {
+          "description": "Error message",
+          "type": "string"
+        },
+        "server_time": {
+          "description": "Server timestamp",
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "LoginUserParams": {
+      "type": "object",
+      "required": [
+        "email",
+        "password"
+      ],
+      "properties": {
+        "email": {
+          "type": "string",
+          "format": "email",
+          "example": "customer@fanzru.dev"
+        },
+        "password": {
+          "type": "string",
+          "example": "password"
+        }
+      }
+    },
+    "PaginationMeta": {
+      "type": "object",
+      "properties": {
+        "current_page": {
+          "type": "integer"
+        },
+        "per_page": {
+          "type": "integer"
+        },
+        "total": {
+          "type": "integer"
+        },
+        "total_pages": {
+          "type": "integer"
+        }
+      }
+    },
+    "ProductListResponse": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/StandardResponse"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "data": {
+              "type": "object",
+              "properties": {
+                "products": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "description": "Product ID",
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "inventory": {
+                        "description": "Available inventory",
+                        "type": "integer"
+                      },
+                      "name": {
+                        "description": "Product name",
+                        "type": "string"
+                      },
+                      "price": {
+                        "description": "Product price",
+                        "type": "number",
+                        "format": "float"
+                      },
+                      "sku": {
+                        "description": "Product SKU",
+                        "type": "string"
+                      }
+                    }
+                  }
+                },
+                "total": {
+                  "description": "Total number of products",
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "ProductResponse": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/StandardResponse"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "data": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "description": "Product ID",
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "inventory": {
+                  "description": "Available inventory",
+                  "type": "integer"
+                },
+                "name": {
+                  "description": "Product name",
+                  "type": "string"
+                },
+                "price": {
+                  "description": "Product price",
+                  "type": "number",
+                  "format": "float"
+                },
+                "sku": {
+                  "description": "Product SKU",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "Promotion": {
+      "type": "object",
+      "properties": {
+        "active": {
+          "type": "boolean"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "description": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "BUY_ONE_GET_ONE_FREE",
+            "BUY_3_PAY_2",
+            "BULK_DISCOUNT"
+          ]
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "PromotionApplied": {
+      "type": "object",
+      "properties": {
+        "checkout_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "description": {
+          "type": "string"
+        },
+        "discount": {
+          "type": "number",
+          "format": "float"
+        },
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "promotion_id": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    },
+    "PromotionCreate": {},
+    "PromotionListResponse": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/StandardResponse"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "data": {
+              "type": "object",
+              "properties": {
+                "meta": {
+                  "$ref": "#/definitions/PaginationMeta"
+                },
+                "promotions": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/Promotion"
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "PromotionResponse": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/StandardResponse"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "data": {
+              "$ref": "#/definitions/Promotion"
+            }
+          }
+        }
+      ]
+    },
+    "RegisterUserParams": {
+      "type": "object",
+      "required": [
+        "email",
+        "password",
+        "name"
+      ],
+      "properties": {
+        "email": {
+          "type": "string",
+          "format": "email"
+        },
+        "name": {
+          "type": "string"
+        },
+        "password": {
+          "type": "string",
+          "minLength": 8
+        }
+      }
+    },
+    "StandardResponse": {
+      "type": "object",
+      "required": [
+        "data",
+        "message",
+        "code",
+        "server_time"
+      ],
+      "properties": {
+        "code": {
+          "description": "Response code",
+          "type": "string"
+        },
+        "data": {
+          "description": "Response data payload",
+          "type": "object"
+        },
+        "message": {
+          "description": "Response message",
+          "type": "string"
+        },
+        "server_time": {
+          "description": "Server timestamp",
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "TokenPair": {
+      "type": "object",
+      "properties": {
+        "access_token": {
+          "type": "string"
+        },
+        "expires_in": {
+          "description": "Token expiration time in seconds",
+          "type": "integer"
+        },
+        "refresh_token": {
+          "type": "string"
+        }
+      }
+    },
+    "TokenResponse": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/StandardResponse"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "data": {
+              "$ref": "#/definitions/TokenPair"
+            }
+          }
+        }
+      ]
+    },
+    "UpdatePasswordParams": {
+      "type": "object",
+      "required": [
+        "current_password",
+        "new_password"
+      ],
+      "properties": {
+        "current_password": {
+          "type": "string"
+        },
+        "new_password": {
+          "type": "string",
+          "minLength": 8
+        }
+      }
+    },
+    "UpdateProductParams": {
+      "type": "object",
+      "properties": {
+        "inventory": {
+          "description": "Available inventory",
+          "type": "integer"
+        },
+        "name": {
+          "description": "Product name",
+          "type": "string"
+        },
+        "price": {
+          "description": "Product price",
+          "type": "number",
+          "format": "float"
+        }
+      }
+    },
+    "UpdateUserParams": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        }
+      }
+    },
+    "User": {
+      "type": "object",
+      "properties": {
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "email": {
+          "type": "string",
+          "format": "email"
+        },
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "name": {
+          "type": "string"
+        },
+        "role": {
+          "type": "string",
+          "enum": [
+            "admin",
+            "customer"
+          ]
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "UserListResponse": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/StandardResponse"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "data": {
+              "type": "object",
+              "properties": {
+                "meta": {
+                  "type": "object",
+                  "properties": {
+                    "current_page": {
+                      "type": "integer"
+                    },
+                    "per_page": {
+                      "type": "integer"
+                    },
+                    "total": {
+                      "type": "integer"
+                    },
+                    "total_pages": {
+                      "type": "integer"
+                    }
+                  }
+                },
+                "users": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/User"
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "UserResponse": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/StandardResponse"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "data": {
+              "$ref": "#/definitions/User"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "securityDefinitions": {
+    "BearerAuth": {
+      "type": "apiKey",
+      "name": "Authorization",
+      "in": "header"
+    }
+  },
+  "tags": [
+    {
+      "description": "Shopping cart operations",
+      "name": "Cart"
+    },
+    {
+      "description": "Operations for managing items in a cart",
+      "name": "Cart Items"
+    },
+    {
+      "description": "Checkout operations",
+      "name": "Checkout"
+    },
+    {
+      "description": "Payment processing operations",
+      "name": "Payment"
+    },
+    {
+      "description": "Product management operations",
+      "name": "Products"
+    },
+    {
+      "description": "Promotion management operations",
+      "name": "Promotions"
+    },
+    {
+      "description": "Authentication operations",
+      "name": "Auth"
+    },
+    {
+      "description": "User management operations",
+      "name": "Users"
+    }
+  ],
+  "x-components": {}
+}

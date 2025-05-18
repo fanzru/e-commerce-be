@@ -1,0 +1,423 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "description": "Checkout API for e-commerce platform",
+    "title": "Checkout API",
+    "version": "1.0.0"
+  },
+  "basePath": "/",
+  "paths": {
+    "/api/v1/checkouts": {
+      "get": {
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "default": 1,
+            "description": "Page number",
+            "in": "query",
+            "name": "page",
+            "type": "integer"
+          },
+          {
+            "default": 10,
+            "description": "Number of items per page",
+            "in": "query",
+            "name": "limit",
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/CheckoutListResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        },
+        "tags": [
+          "Checkout"
+        ],
+        "description": "Retrieves a paginated list of checkouts",
+        "summary": "List checkouts"
+      },
+      "post": {
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "properties": {
+                "cart_id": {
+                  "description": "ID of the cart to checkout",
+                  "format": "uuid",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "cart_id"
+              ],
+              "type": "object"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Checkout created",
+            "schema": {
+              "$ref": "#/definitions/CheckoutResponse"
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "404": {
+            "description": "Cart not found",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "409": {
+            "description": "Cart already checked out",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        },
+        "tags": [
+          "Checkout"
+        ],
+        "description": "Process cart and create a checkout",
+        "summary": "Create a new checkout"
+      }
+    },
+    "/api/v1/checkouts/{id}": {
+      "get": {
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "description": "Checkout ID",
+            "format": "uuid",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/CheckoutResponse"
+            }
+          },
+          "404": {
+            "description": "Checkout not found",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        },
+        "tags": [
+          "Checkout"
+        ],
+        "description": "Retrieves a checkout by its ID",
+        "summary": "Get checkout by ID"
+      }
+    }
+  },
+  "definitions": {
+    "Checkout": {
+      "properties": {
+        "cart_id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "created_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/definitions/CheckoutItem"
+          },
+          "type": "array"
+        },
+        "promotions": {
+          "items": {
+            "$ref": "#/definitions/PromotionApplied"
+          },
+          "type": "array"
+        },
+        "subtotal": {
+          "format": "float",
+          "type": "number"
+        },
+        "total": {
+          "format": "float",
+          "type": "number"
+        },
+        "total_discount": {
+          "format": "float",
+          "type": "number"
+        }
+      },
+      "type": "object"
+    },
+    "CheckoutItem": {
+      "properties": {
+        "checkout_id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "discount": {
+          "format": "float",
+          "type": "number"
+        },
+        "id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "product_id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "product_name": {
+          "type": "string"
+        },
+        "product_sku": {
+          "type": "string"
+        },
+        "quantity": {
+          "type": "integer"
+        },
+        "subtotal": {
+          "format": "float",
+          "type": "number"
+        },
+        "total": {
+          "format": "float",
+          "type": "number"
+        },
+        "unit_price": {
+          "format": "float",
+          "type": "number"
+        }
+      },
+      "type": "object"
+    },
+    "CheckoutListResponse": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/StandardResponse"
+        },
+        {
+          "properties": {
+            "data": {
+              "properties": {
+                "checkouts": {
+                  "items": {
+                    "$ref": "#/definitions/CheckoutSummary"
+                  },
+                  "type": "array"
+                },
+                "meta": {
+                  "$ref": "#/definitions/PaginationMeta"
+                }
+              },
+              "type": "object"
+            }
+          },
+          "type": "object"
+        }
+      ]
+    },
+    "CheckoutResponse": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/StandardResponse"
+        },
+        {
+          "properties": {
+            "data": {
+              "$ref": "#/definitions/Checkout"
+            }
+          },
+          "type": "object"
+        }
+      ]
+    },
+    "CheckoutSummary": {
+      "properties": {
+        "cart_id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "created_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "subtotal": {
+          "format": "float",
+          "type": "number"
+        },
+        "total": {
+          "format": "float",
+          "type": "number"
+        },
+        "total_discount": {
+          "format": "float",
+          "type": "number"
+        }
+      },
+      "type": "object"
+    },
+    "ErrorResponse": {
+      "properties": {
+        "code": {
+          "description": "Error code",
+          "type": "string"
+        },
+        "data": {
+          "description": "Additional error data",
+          "type": "object",
+          "x-nullable": true
+        },
+        "message": {
+          "description": "Error message",
+          "type": "string"
+        },
+        "server_time": {
+          "description": "Server timestamp",
+          "format": "date-time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "message",
+        "code",
+        "server_time"
+      ],
+      "type": "object"
+    },
+    "PaginationMeta": {
+      "properties": {
+        "current_page": {
+          "type": "integer"
+        },
+        "per_page": {
+          "type": "integer"
+        },
+        "total": {
+          "type": "integer"
+        },
+        "total_pages": {
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "PromotionApplied": {
+      "properties": {
+        "checkout_id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "discount": {
+          "format": "float",
+          "type": "number"
+        },
+        "id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "promotion_id": {
+          "format": "uuid",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "StandardResponse": {
+      "properties": {
+        "code": {
+          "description": "Response code",
+          "type": "string"
+        },
+        "data": {
+          "description": "Response data payload",
+          "type": "object"
+        },
+        "message": {
+          "description": "Response message",
+          "type": "string"
+        },
+        "server_time": {
+          "description": "Server timestamp",
+          "format": "date-time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "data",
+        "message",
+        "code",
+        "server_time"
+      ],
+      "type": "object"
+    }
+  },
+  "tags": [
+    {
+      "description": "Checkout operations",
+      "name": "Checkout"
+    },
+    {
+      "description": "Payment processing operations",
+      "name": "Payment"
+    }
+  ],
+  "x-components": {}
+}

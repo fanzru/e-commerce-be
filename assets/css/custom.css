@@ -1,0 +1,43 @@
+/* Custom Swagger UI Styles */
+.logo {
+  max-width: 200px;
+  margin: 20px;
+  display: block;
+}
+
+.swagger-ui .topbar {
+  background-color: #4a90e2;
+  padding: 10px 0;
+}
+
+/* Remove white space above header */
+body {
+  margin: 0;
+  padding: 0;
+  background: #fafafa;
+}
+
+html {
+  box-sizing: border-box;
+  overflow-y: scroll;
+  height: 100%;
+}
+
+/* Fix header to be full width */
+.swagger-ui .topbar .wrapper {
+  padding: 0;
+  max-width: 100%;
+}
+
+.swagger-ui .info {
+  margin: 30px 0;
+}
+
+.swagger-ui .info .title {
+  color: #3b4151;
+}
+
+/* Add some custom branding */
+.swagger-ui .topbar .download-url-wrapper .select-label {
+  color: white;
+}
