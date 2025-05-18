@@ -3,6 +3,7 @@ package middleware
 import (
 	"encoding/json"
 	"net/http"
+	"reflect"
 	"time"
 
 	"github.com/fanzru/e-commerce-be/internal/common/errs"
@@ -62,6 +63,20 @@ func RespondWithError(w http.ResponseWriter, err error) {
 
 // RespondWithJSON responds with a JSON message
 func RespondWithJSON(w http.ResponseWriter, statusCode int, payload interface{}) {
+	// Check if payload already has a standard response format
+	// by checking if it has the Code, Message, and ServerTime fields
+	if hasStandardFormat(payload) {
+		// If payload already has the standard format, use it directly
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(statusCode)
+		if err := json.NewEncoder(w).Encode(payload); err != nil {
+			Logger.Error("Failed to encode response", "error", err.Error())
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+		}
+		return
+	}
+
+	// Otherwise, wrap it in the standard format
 	response := struct {
 		Code       string      `json:"code"`
 		Message    string      `json:"message"`
@@ -80,6 +95,29 @@ func RespondWithJSON(w http.ResponseWriter, statusCode int, payload interface{})
 		Logger.Error("Failed to encode response", "error", err.Error())
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 	}
+}
+
+// hasStandardFormat checks if a value has the standard response format
+func hasStandardFormat(v interface{}) bool {
+	// Use reflection to check if v has Code, Message, and ServerTime fields
+	vValue := reflect.ValueOf(v)
+
+	// If v is a pointer, get its underlying value
+	if vValue.Kind() == reflect.Ptr && !vValue.IsNil() {
+		vValue = vValue.Elem()
+	}
+
+	// Only struct types can have our standard format
+	if vValue.Kind() != reflect.Struct {
+		return false
+	}
+
+	// Check for the presence of required fields
+	codeField := vValue.FieldByName("Code")
+	messageField := vValue.FieldByName("Message")
+	serverTimeField := vValue.FieldByName("ServerTime")
+
+	return codeField.IsValid() && messageField.IsValid() && serverTimeField.IsValid()
 }
 
 // getMessageForStatusCode returns a message for a status code
