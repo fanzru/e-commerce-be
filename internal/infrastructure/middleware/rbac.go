@@ -87,7 +87,7 @@ func (rm *RBACMiddleware) Wrap(handler http.Handler) http.Handler {
 
 		// Determine the operation from the request
 		operationID := rm.getOperationFromRequest(r)
-		Logger.Info("RBAC: Handling request",
+		Logger.Debug("RBAC: Handling request",
 			slog.String("request_id", requestID),
 			slog.String("method", r.Method),
 			slog.String("path", r.URL.Path),
@@ -98,12 +98,12 @@ func (rm *RBACMiddleware) Wrap(handler http.Handler) http.Handler {
 		allowedRoles := rm.defaultAccess
 		if exists {
 			allowedRoles = access.AllowedRoles
-			Logger.Info("RBAC: Found operation config",
+			Logger.Debug("RBAC: Found operation config",
 				slog.String("request_id", requestID),
 				slog.String("operation", operationID),
 				slog.Any("allowed_roles", allowedRoles))
 		} else {
-			Logger.Warn("RBAC: Operation not explicitly configured, using defaults",
+			Logger.Debug("RBAC: Operation not explicitly configured, using defaults",
 				slog.String("request_id", requestID),
 				slog.String("operation", operationID),
 				slog.Any("default_roles", allowedRoles))
@@ -126,7 +126,7 @@ func (rm *RBACMiddleware) Wrap(handler http.Handler) http.Handler {
 		// First, extract token and validate
 		authHeader := r.Header.Get("Authorization")
 		if authHeader == "" {
-			Logger.Warn("RBAC: Authorization header missing",
+			Logger.Debug("RBAC: Authorization header missing",
 				slog.String("request_id", requestID),
 				slog.String("operation", operationID))
 
@@ -137,7 +137,7 @@ func (rm *RBACMiddleware) Wrap(handler http.Handler) http.Handler {
 		// Check if it's a Bearer token
 		parts := strings.Split(authHeader, " ")
 		if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
-			Logger.Warn("RBAC: Invalid authorization format",
+			Logger.Debug("RBAC: Invalid authorization format",
 				slog.String("request_id", requestID),
 				slog.String("operation", operationID),
 				slog.String("auth_header", authHeader))
@@ -151,7 +151,7 @@ func (rm *RBACMiddleware) Wrap(handler http.Handler) http.Handler {
 		// Validate token using the TokenValidator from the factory
 		claims, err := rm.factory.tokenValidator.ValidateToken(tokenString)
 		if err != nil {
-			Logger.Warn("RBAC: Invalid token",
+			Logger.Debug("RBAC: Invalid token",
 				slog.String("request_id", requestID),
 				slog.String("operation", operationID),
 				slog.String("error", err.Error()))
@@ -171,7 +171,7 @@ func (rm *RBACMiddleware) Wrap(handler http.Handler) http.Handler {
 			userAuthType = AuthTypeBearer // Just authenticated, no specific role
 		}
 
-		Logger.Info("RBAC: User authenticated",
+		Logger.Debug("RBAC: User authenticated",
 			slog.String("request_id", requestID),
 			slog.String("operation", operationID),
 			slog.String("user_id", claims.UserID),
@@ -181,7 +181,7 @@ func (rm *RBACMiddleware) Wrap(handler http.Handler) http.Handler {
 
 		// Check if the user's role is allowed
 		if !containsAuthType(allowedRoles, userAuthType) {
-			Logger.Warn("RBAC: Insufficient permissions",
+			Logger.Debug("RBAC: Insufficient permissions",
 				slog.String("request_id", requestID),
 				slog.String("operation", operationID),
 				slog.String("user_role", string(userAuthType)),
@@ -192,7 +192,7 @@ func (rm *RBACMiddleware) Wrap(handler http.Handler) http.Handler {
 		}
 
 		// Role is allowed, apply appropriate middleware chain
-		Logger.Info("RBAC: Access granted",
+		Logger.Debug("RBAC: Access granted",
 			slog.String("request_id", requestID),
 			slog.String("operation", operationID),
 			slog.String("user_id", claims.UserID),

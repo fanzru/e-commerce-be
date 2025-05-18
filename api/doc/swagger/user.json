@@ -110,66 +110,6 @@
         "summary": "Logout a user"
       }
     },
-    "/api/v1/auth/refresh": {
-      "post": {
-        "consumes": [
-          "application/json"
-        ],
-        "produces": [
-          "application/json"
-        ],
-        "parameters": [
-          {
-            "in": "body",
-            "name": "body",
-            "required": true,
-            "schema": {
-              "properties": {
-                "refresh_token": {
-                  "type": "string"
-                }
-              },
-              "required": [
-                "refresh_token"
-              ],
-              "type": "object"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Token refreshed successfully",
-            "schema": {
-              "$ref": "#/definitions/TokenResponse"
-            }
-          },
-          "400": {
-            "description": "Invalid input",
-            "schema": {
-              "$ref": "#/definitions/ErrorResponse"
-            }
-          },
-          "401": {
-            "description": "Invalid or expired token",
-            "schema": {
-              "$ref": "#/definitions/ErrorResponse"
-            }
-          },
-          "500": {
-            "description": "Internal server error",
-            "schema": {
-              "$ref": "#/definitions/ErrorResponse"
-            }
-          }
-        },
-        "tags": [
-          "Auth"
-        ],
-        "description": "Refreshes the access token using a refresh token",
-        "operationId": "refreshToken",
-        "summary": "Refresh access token"
-      }
-    },
     "/api/v1/auth/register": {
       "post": {
         "consumes": [
@@ -222,129 +162,7 @@
         "summary": "Register a new user"
       }
     },
-    "/api/v1/users": {
-      "get": {
-        "produces": [
-          "application/json"
-        ],
-        "parameters": [
-          {
-            "default": 1,
-            "description": "Page number for pagination",
-            "in": "query",
-            "name": "page",
-            "type": "integer"
-          },
-          {
-            "default": 10,
-            "description": "Number of items per page",
-            "in": "query",
-            "name": "limit",
-            "type": "integer"
-          },
-          {
-            "description": "Filter by user role",
-            "in": "query",
-            "name": "role",
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "A list of users",
-            "schema": {
-              "$ref": "#/definitions/UserListResponse"
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "schema": {
-              "$ref": "#/definitions/ErrorResponse"
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "schema": {
-              "$ref": "#/definitions/ErrorResponse"
-            }
-          },
-          "500": {
-            "description": "Internal server error",
-            "schema": {
-              "$ref": "#/definitions/ErrorResponse"
-            }
-          }
-        },
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "tags": [
-          "Users"
-        ],
-        "description": "Returns a list of users with pagination",
-        "operationId": "listUsers",
-        "summary": "List users"
-      }
-    },
-    "/api/v1/users/{id}": {
-      "parameters": [
-        {
-          "description": "User ID",
-          "format": "uuid",
-          "in": "path",
-          "name": "id",
-          "required": true,
-          "type": "string"
-        }
-      ],
-      "delete": {
-        "produces": [
-          "application/json"
-        ],
-        "parameters": [],
-        "responses": {
-          "204": {
-            "description": "User deleted successfully"
-          },
-          "401": {
-            "description": "Unauthorized",
-            "schema": {
-              "$ref": "#/definitions/ErrorResponse"
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "schema": {
-              "$ref": "#/definitions/ErrorResponse"
-            }
-          },
-          "404": {
-            "description": "User not found",
-            "schema": {
-              "$ref": "#/definitions/ErrorResponse"
-            }
-          },
-          "500": {
-            "description": "Internal server error",
-            "schema": {
-              "$ref": "#/definitions/ErrorResponse"
-            }
-          }
-        },
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "tags": [
-          "Users"
-        ],
-        "description": "Deletes a user (soft delete)",
-        "operationId": "deleteUser",
-        "summary": "Delete user"
-      },
+    "/api/v1/users/me": {
       "get": {
         "produces": [
           "application/json"
@@ -352,7 +170,7 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": "User details",
+            "description": "Current user details",
             "schema": {
               "$ref": "#/definitions/UserResponse"
             }
@@ -363,18 +181,6 @@
               "$ref": "#/definitions/ErrorResponse"
             }
           },
-          "403": {
-            "description": "Forbidden",
-            "schema": {
-              "$ref": "#/definitions/ErrorResponse"
-            }
-          },
-          "404": {
-            "description": "User not found",
-            "schema": {
-              "$ref": "#/definitions/ErrorResponse"
-            }
-          },
           "500": {
             "description": "Internal server error",
             "schema": {
@@ -390,152 +196,9 @@
         "tags": [
           "Users"
         ],
-        "description": "Returns a user by its UUID",
-        "operationId": "getUser",
-        "summary": "Get user by ID"
-      },
-      "patch": {
-        "consumes": [
-          "application/json"
-        ],
-        "produces": [
-          "application/json"
-        ],
-        "parameters": [
-          {
-            "in": "body",
-            "name": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/UpdateUserParams"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "User updated successfully",
-            "schema": {
-              "$ref": "#/definitions/UserResponse"
-            }
-          },
-          "400": {
-            "description": "Invalid input",
-            "schema": {
-              "$ref": "#/definitions/ErrorResponse"
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "schema": {
-              "$ref": "#/definitions/ErrorResponse"
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "schema": {
-              "$ref": "#/definitions/ErrorResponse"
-            }
-          },
-          "404": {
-            "description": "User not found",
-            "schema": {
-              "$ref": "#/definitions/ErrorResponse"
-            }
-          },
-          "500": {
-            "description": "Internal server error",
-            "schema": {
-              "$ref": "#/definitions/ErrorResponse"
-            }
-          }
-        },
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "tags": [
-          "Users"
-        ],
-        "description": "Updates a user's details",
-        "operationId": "updateUser",
-        "summary": "Update user"
-      }
-    },
-    "/api/v1/users/{id}/password": {
-      "parameters": [
-        {
-          "description": "User ID",
-          "format": "uuid",
-          "in": "path",
-          "name": "id",
-          "required": true,
-          "type": "string"
-        }
-      ],
-      "put": {
-        "consumes": [
-          "application/json"
-        ],
-        "produces": [
-          "application/json"
-        ],
-        "parameters": [
-          {
-            "in": "body",
-            "name": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/UpdatePasswordParams"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Password updated successfully"
-          },
-          "400": {
-            "description": "Invalid input",
-            "schema": {
-              "$ref": "#/definitions/ErrorResponse"
-            }
-          },
-          "401": {
-            "description": "Unauthorized or invalid current password",
-            "schema": {
-              "$ref": "#/definitions/ErrorResponse"
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "schema": {
-              "$ref": "#/definitions/ErrorResponse"
-            }
-          },
-          "404": {
-            "description": "User not found",
-            "schema": {
-              "$ref": "#/definitions/ErrorResponse"
-            }
-          },
-          "500": {
-            "description": "Internal server error",
-            "schema": {
-              "$ref": "#/definitions/ErrorResponse"
-            }
-          }
-        },
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "tags": [
-          "Users"
-        ],
-        "description": "Updates a user's password",
-        "operationId": "updatePassword",
-        "summary": "Update password"
+        "description": "Returns the authenticated user's details",
+        "operationId": "getCurrentUser",
+        "summary": "Get current user"
       }
     }
   },
@@ -548,7 +211,8 @@
         },
         "data": {
           "description": "Additional error data",
-          "type": "object"
+          "type": "object",
+          "x-nullable": true
         },
         "message": {
           "description": "Error message",
@@ -560,17 +224,20 @@
           "type": "string"
         }
       },
+      "required": [
+        "message",
+        "code",
+        "server_time"
+      ],
       "type": "object"
     },
     "LoginUserParams": {
       "properties": {
         "email": {
-          "example": "customer@fanzru.dev",
           "format": "email",
           "type": "string"
         },
         "password": {
-          "example": "password",
           "type": "string"
         }
       },
@@ -580,6 +247,23 @@
       ],
       "type": "object"
     },
+    "PaginationMeta": {
+      "properties": {
+        "current_page": {
+          "type": "integer"
+        },
+        "per_page": {
+          "type": "integer"
+        },
+        "total": {
+          "type": "integer"
+        },
+        "total_pages": {
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
     "RegisterUserParams": {
       "properties": {
         "email": {
@@ -587,17 +271,28 @@
           "type": "string"
         },
         "name": {
+          "maxLength": 100,
+          "minLength": 2,
           "type": "string"
         },
         "password": {
+          "maxLength": 100,
           "minLength": 8,
+          "type": "string"
+        },
+        "role": {
+          "default": "customer",
+          "enum": [
+            "admin",
+            "customer"
+          ],
           "type": "string"
         }
       },
       "required": [
+        "name",
         "email",
-        "password",
-        "name"
+        "password"
       ],
       "type": "object"
     },
@@ -608,7 +303,7 @@
           "type": "string"
         },
         "data": {
-          "description": "Response data payload",
+          "description": "Response data",
           "type": "object"
         },
         "message": {
@@ -621,21 +316,12 @@
           "type": "string"
         }
       },
-      "type": "object"
-    },
-    "TokenPair": {
-      "properties": {
-        "access_token": {
-          "type": "string"
-        },
-        "expires_in": {
-          "description": "Token expiration time in seconds",
-          "type": "integer"
-        },
-        "refresh_token": {
-          "type": "string"
-        }
-      },
+      "required": [
+        "data",
+        "message",
+        "code",
+        "server_time"
+      ],
       "type": "object"
     },
     "TokenResponse": {
@@ -646,7 +332,26 @@
         {
           "properties": {
             "data": {
-              "$ref": "#/definitions/TokenPair"
+              "properties": {
+                "access_token": {
+                  "description": "JWT access token",
+                  "type": "string"
+                },
+                "expires_in": {
+                  "description": "Token expiration time in seconds",
+                  "type": "integer"
+                },
+                "refresh_token": {
+                  "description": "Refresh token for obtaining a new access token",
+                  "type": "string"
+                },
+                "token_type": {
+                  "default": "bearer",
+                  "description": "Token type",
+                  "type": "string"
+                }
+              },
+              "type": "object"
             }
           },
           "type": "object"
@@ -659,6 +364,7 @@
           "type": "string"
         },
         "new_password": {
+          "maxLength": 100,
           "minLength": 8,
           "type": "string"
         }
@@ -671,7 +377,20 @@
     },
     "UpdateUserParams": {
       "properties": {
+        "email": {
+          "format": "email",
+          "type": "string"
+        },
         "name": {
+          "maxLength": 100,
+          "minLength": 2,
+          "type": "string"
+        },
+        "role": {
+          "enum": [
+            "admin",
+            "customer"
+          ],
           "type": "string"
         }
       },
@@ -718,21 +437,7 @@
             "data": {
               "properties": {
                 "meta": {
-                  "properties": {
-                    "current_page": {
-                      "type": "integer"
-                    },
-                    "per_page": {
-                      "type": "integer"
-                    },
-                    "total": {
-                      "type": "integer"
-                    },
-                    "total_pages": {
-                      "type": "integer"
-                    }
-                  },
-                  "type": "object"
+                  "$ref": "#/definitions/PaginationMeta"
                 },
                 "users": {
                   "items": {

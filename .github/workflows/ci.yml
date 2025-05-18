@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+          cache: true
+
+      - name: Install dependencies
+        run: go mod download
+
+      - name: Install oapi-codegen v2
+        run: go install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@latest
+
+      - name: Generate HTTP code
+        run: |
+          echo "Generating HTTP code from OpenAPI specs"
+          make gen-http || ./scripts/generate.sh
+
+      - name: Check code format
+        run: |
+          if [ -z "$(go fmt ./...)" ]; then
+            echo "Code is properly formatted"
+          else
+            echo "Code is not properly formatted"
+            go fmt ./...
+            exit 1
+          fi
+
+      - name: Build Go binary
+        run: go build -v ./cmd/core
+
+      - name: Build Docker image
+        run: |
+          docker build -t e-commerce-be:pr-${{ github.event.pull_request.number }} \
+            --build-arg DB_HOST=host.docker.internal \
+            --build-arg APP_ENV=testing .
+
+          echo "Successfully built Docker image e-commerce-be:pr-${{ github.event.pull_request.number }}"
+
+      - name: Verify Docker image
+        run: |
+          # Check if image exists
+          if docker image inspect e-commerce-be:pr-${{ github.event.pull_request.number }} > /dev/null 2>&1; then
+            echo "✅ Docker image verification successful"
+          else
+            echo "❌ Docker image verification failed"
+            exit 1
+          fi

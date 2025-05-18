@@ -6,7 +6,7 @@ import (
 
 // CheckoutRequest defines the parameters for creating a checkout
 type CheckoutRequest struct {
-	CartID uuid.UUID `json:"cart_id" binding:"required"`
+	// No parameters needed since user_id comes from the auth token
 }
 
 // CheckoutItemResponse defines the response structure for a checkout item
@@ -30,7 +30,6 @@ type PromotionAppliedResponse struct {
 // CheckoutResponse defines the response structure for a checkout
 type CheckoutResponse struct {
 	ID            uuid.UUID                  `json:"id"`
-	CartID        uuid.UUID                  `json:"cart_id"`
 	Items         []CheckoutItemResponse     `json:"items"`
 	Promotions    []PromotionAppliedResponse `json:"promotions"`
 	Subtotal      float64                    `json:"subtotal"`

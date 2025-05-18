@@ -8,6 +8,8 @@ import (
 	"github.com/fanzru/e-commerce-be/internal/app/checkout/domain/entity"
 	"github.com/fanzru/e-commerce-be/internal/app/checkout/port/genhttp"
 	"github.com/fanzru/e-commerce-be/internal/app/checkout/usecase"
+	"github.com/fanzru/e-commerce-be/internal/app/user/domain/params"
+	appmiddleware "github.com/fanzru/e-commerce-be/internal/infrastructure/middleware"
 	"github.com/fanzru/e-commerce-be/pkg/errors"
 	"github.com/google/uuid"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -97,9 +99,15 @@ func (h *CheckoutHandler) GetApiV1Checkouts(w http.ResponseWriter, r *http.Reque
 		totalDiscount := float32(checkout.TotalDiscount)
 		total := float32(checkout.Total)
 
+		// Convert payment status and order status
+		paymentStatus := genhttp.CheckoutSummaryPaymentStatus(checkout.PaymentStatus)
+		status := genhttp.CheckoutSummaryStatus(checkout.Status)
+
 		checkoutSummaries[i] = genhttp.CheckoutSummary{
 			Id:            &checkout.ID,
-			CartId:        &checkout.CartID,
+			UserId:        checkout.UserID,
+			PaymentStatus: &paymentStatus,
+			Status:        &status,
 			Subtotal:      &subtotal,
 			TotalDiscount: &totalDiscount,
 			Total:         &total,
@@ -135,29 +143,250 @@ func (h *CheckoutHandler) GetApiV1Checkouts(w http.ResponseWriter, r *http.Reque
 // PostApiV1Checkouts handles POST /v1/checkouts requests
 func (h *CheckoutHandler) PostApiV1Checkouts(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-
-	var requestBody genhttp.PostApiV1CheckoutsJSONRequestBody
-	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
-		handleError(w, errors.NewBadRequest("invalid request body"))
+	// Get user ID from token claims in context
+	claims, ok := ctx.Value("token_claims").(*params.TokenClaims)
+	if !ok {
+		handleError(w, errors.NewUnauthorized("unauthorized: missing token claims"))
 		return
 	}
+	userIDStr := claims.UserID
 
-	cartID, err := uuid.Parse(requestBody.CartId.String())
+	// Parse user ID from string to UUID
+	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
-		handleError(w, errors.NewBadRequest("invalid cart ID"))
+		handleError(w, errors.NewBadRequest("invalid user ID"))
 		return
 	}
 
-	checkout, err := h.checkoutUseCase.ProcessCart(ctx, cartID)
+	// Process cart checkout
+	checkout, err := h.checkoutUseCase.ProcessCart(ctx, userID)
 	if err != nil {
 		handleError(w, err)
 		return
 	}
 
+	// Log that we're clearing the cart (it's already cleared in ProcessCart)
+	logger := appmiddleware.Logger.With(
+		"method", "CheckoutHandler.PostApiV1Checkouts",
+		"user_id", userID.String(),
+	)
+	logger.Info("User cart cleared after checkout")
+
 	respondJSON(w, http.StatusCreated, mapCheckoutToResponse(checkout))
 }
 
+// GetApiV1UsersUserIdOrders handles GET /api/v1/users/{user_id}/orders requests
+func (h *CheckoutHandler) GetApiV1UsersUserIdOrders(w http.ResponseWriter, r *http.Request, userId openapi_types.UUID, params genhttp.GetApiV1UsersUserIdOrdersParams) {
+	ctx := r.Context()
+
+	// Convert UUID
+	userID, err := uuid.Parse(userId.String())
+	if err != nil {
+		handleError(w, errors.NewBadRequest("invalid user ID"))
+		return
+	}
+
+	// Set default values if not provided
+	page := 1
+	limit := 10
+
+	if params.Page != nil {
+		page = *params.Page
+	}
+
+	if params.Limit != nil {
+		limit = *params.Limit
+	}
+
+	// Call the use case
+	orders, total, err := h.checkoutUseCase.GetUserOrders(ctx, userID, page, limit)
+	if err != nil {
+		handleError(w, err)
+		return
+	}
+
+	// Convert to response format
+	orderSummaries := make([]genhttp.OrderSummary, len(orders))
+	for i, order := range orders {
+		subtotal := float32(order.Subtotal)
+		totalDiscount := float32(order.TotalDiscount)
+		total := float32(order.Total)
+		itemCount := len(order.Items)
+
+		// Convert payment status and order status
+		paymentStatus := genhttp.OrderSummaryPaymentStatus(order.PaymentStatus)
+		status := genhttp.OrderSummaryStatus(order.Status)
+
+		orderSummaries[i] = genhttp.OrderSummary{
+			Id:            &order.ID,
+			PaymentStatus: &paymentStatus,
+			Status:        &status,
+			Subtotal:      &subtotal,
+			TotalDiscount: &totalDiscount,
+			Total:         &total,
+			ItemCount:     &itemCount,
+			CreatedAt:     &order.CreatedAt,
+			CompletedAt:   order.CompletedAt,
+		}
+	}
+
+	meta := genhttp.PaginationMeta{
+		CurrentPage: &page,
+		PerPage:     &limit,
+		Total:       &total,
+	}
+
+	totalPages := (total + limit - 1) / limit
+	meta.TotalPages = &totalPages
+
+	response := genhttp.OrderListResponse{
+		Code:    "success",
+		Message: "User orders retrieved successfully",
+		Data: struct {
+			Meta   *genhttp.PaginationMeta `json:"meta,omitempty"`
+			Orders *[]genhttp.OrderSummary `json:"orders,omitempty"`
+		}{
+			Orders: &orderSummaries,
+			Meta:   &meta,
+		},
+		ServerTime: time.Now(),
+	}
+
+	respondJSON(w, http.StatusOK, response)
+}
+
+// PutApiV1CheckoutsIdPayment handles PUT /api/v1/checkouts/{id}/payment requests
+func (h *CheckoutHandler) PutApiV1CheckoutsIdPayment(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	ctx := r.Context()
+
+	// Parse checkout ID
+	checkoutID, err := uuid.Parse(id.String())
+	if err != nil {
+		handleError(w, errors.NewBadRequest("invalid checkout ID"))
+		return
+	}
+
+	// Parse request body
+	var requestBody genhttp.PaymentStatusUpdateRequest
+	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
+		handleError(w, errors.NewBadRequest("invalid request body"))
+		return
+	}
+
+	// Validate status
+	paymentStatus := entity.PaymentStatus(requestBody.Status)
+	if !isValidPaymentStatus(paymentStatus) {
+		handleError(w, errors.NewBadRequest("invalid payment status"))
+		return
+	}
+
+	// Get payment method and reference
+	paymentMethod := ""
+	paymentReference := ""
+	if requestBody.PaymentMethod != nil {
+		paymentMethod = *requestBody.PaymentMethod
+	}
+	if requestBody.PaymentReference != nil {
+		paymentReference = *requestBody.PaymentReference
+	}
+
+	// Update payment status
+	err = h.checkoutUseCase.UpdatePaymentStatus(ctx, checkoutID, paymentStatus, paymentMethod, paymentReference)
+	if err != nil {
+		handleError(w, err)
+		return
+	}
+
+	// Return success response
+	response := genhttp.SuccessResponse{
+		Code:       "success",
+		Message:    "Payment status updated successfully",
+		ServerTime: time.Now(),
+	}
+
+	respondJSON(w, http.StatusOK, response)
+}
+
+// PutApiV1CheckoutsIdStatus handles PUT /api/v1/checkouts/{id}/status requests
+func (h *CheckoutHandler) PutApiV1CheckoutsIdStatus(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	ctx := r.Context()
+
+	// Parse checkout ID
+	checkoutID, err := uuid.Parse(id.String())
+	if err != nil {
+		handleError(w, errors.NewBadRequest("invalid checkout ID"))
+		return
+	}
+
+	// Parse request body
+	var requestBody genhttp.OrderStatusUpdateRequest
+	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
+		handleError(w, errors.NewBadRequest("invalid request body"))
+		return
+	}
+
+	// Validate status
+	orderStatus := entity.OrderStatus(requestBody.Status)
+	if !isValidOrderStatus(orderStatus) {
+		handleError(w, errors.NewBadRequest("invalid order status"))
+		return
+	}
+
+	// Update order status
+	err = h.checkoutUseCase.UpdateOrderStatus(ctx, checkoutID, orderStatus)
+	if err != nil {
+		handleError(w, err)
+		return
+	}
+
+	// Return success response
+	response := genhttp.SuccessResponse{
+		Code:       "success",
+		Message:    "Order status updated successfully",
+		ServerTime: time.Now(),
+	}
+
+	respondJSON(w, http.StatusOK, response)
+}
+
 // Helper functions
+
+// isValidPaymentStatus checks if a payment status is valid
+func isValidPaymentStatus(status entity.PaymentStatus) bool {
+	validStatuses := []entity.PaymentStatus{
+		entity.PaymentStatusPending,
+		entity.PaymentStatusPaid,
+		entity.PaymentStatusFailed,
+		entity.PaymentStatusRefunded,
+	}
+
+	for _, s := range validStatuses {
+		if status == s {
+			return true
+		}
+	}
+
+	return false
+}
+
+// isValidOrderStatus checks if an order status is valid
+func isValidOrderStatus(status entity.OrderStatus) bool {
+	validStatuses := []entity.OrderStatus{
+		entity.OrderStatusCreated,
+		entity.OrderStatusProcessing,
+		entity.OrderStatusShipped,
+		entity.OrderStatusDelivered,
+		entity.OrderStatusCancelled,
+	}
+
+	for _, s := range validStatuses {
+		if status == s {
+			return true
+		}
+	}
+
+	return false
+}
 
 // mapCheckoutToResponse maps a checkout entity to a checkout response
 func mapCheckoutToResponse(checkout *entity.Checkout) genhttp.CheckoutResponse {
@@ -165,13 +394,24 @@ func mapCheckoutToResponse(checkout *entity.Checkout) genhttp.CheckoutResponse {
 	totalDiscount := float32(checkout.TotalDiscount)
 	total := float32(checkout.Total)
 
+	// Convert payment status and order status
+	paymentStatus := genhttp.CheckoutPaymentStatus(checkout.PaymentStatus)
+	status := genhttp.CheckoutStatus(checkout.Status)
+
 	checkoutData := genhttp.Checkout{
-		Id:            &checkout.ID,
-		CartId:        &checkout.CartID,
-		Subtotal:      &subtotal,
-		TotalDiscount: &totalDiscount,
-		Total:         &total,
-		CreatedAt:     &checkout.CreatedAt,
+		Id:               &checkout.ID,
+		UserId:           checkout.UserID,
+		PaymentStatus:    &paymentStatus,
+		PaymentMethod:    checkout.PaymentMethod,
+		PaymentReference: checkout.PaymentReference,
+		Notes:            checkout.Notes,
+		Status:           &status,
+		Subtotal:         &subtotal,
+		TotalDiscount:    &totalDiscount,
+		Total:            &total,
+		CreatedAt:        &checkout.CreatedAt,
+		UpdatedAt:        &checkout.UpdatedAt,
+		CompletedAt:      checkout.CompletedAt,
 	}
 
 	if len(checkout.Items) > 0 {

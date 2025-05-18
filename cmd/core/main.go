@@ -29,6 +29,7 @@ import (
 	userUseCase "github.com/fanzru/e-commerce-be/internal/app/user/usecase"
 	"github.com/fanzru/e-commerce-be/internal/infrastructure/config"
 	"github.com/fanzru/e-commerce-be/internal/infrastructure/middleware"
+	"github.com/fanzru/e-commerce-be/internal/infrastructure/persistence"
 	_ "github.com/lib/pq"
 )
 
@@ -120,11 +121,17 @@ func main() {
 		IdleTimeout:  60 * time.Second,
 	}
 
+	// Get the hostname from environment or default to localhost
+	swaggerHost := os.Getenv("SWAGGER_HOST")
+	if swaggerHost == "" {
+		swaggerHost = "localhost"
+	}
+
 	// Start server in a goroutine
 	go func() {
 		middleware.Logger.Info("Starting server",
 			"port", serverPort,
-			"swagger_url", fmt.Sprintf("http://localhost:%d/swagger/", serverPort))
+			"swagger_url", fmt.Sprintf("http://%s:%d/swagger/", swaggerHost, serverPort))
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Failed to start server: %v", err)
 		}
@@ -173,6 +180,7 @@ func initializeDatabase(cfg *config.Config) (*sql.DB, error) {
 }
 
 type repositories struct {
+	db            *sql.DB
 	productRepo   productRepo.ProductRepository
 	cartRepo      cartRepo.CartRepository
 	checkoutRepo  checkoutRepo.CheckoutRepository
@@ -185,6 +193,7 @@ func initializeRepositories(db *sql.DB) (*repositories, error) {
 	// Initialize repositories from each domain
 
 	return &repositories{
+		db:            db,
 		productRepo:   productRepo.NewProductRepository(db),
 		cartRepo:      cartRepo.NewCartRepository(db),
 		checkoutRepo:  checkoutRepo.NewCheckoutRepository(db),
@@ -203,10 +212,14 @@ type useCases struct {
 }
 
 func initializeUseCases(repos *repositories, cfg *config.Config) *useCases {
+	// Initialize transaction manager
+	txManager := persistence.ProvideTransactionManager(repos.db)
+
+	// Initialize use cases with proper dependencies
 	productUC := productUseCase.NewProductUseCase(repos.productRepo)
-	cartUC := cartUseCase.NewCartUseCase(repos.cartRepo, repos.productRepo)
 	promotionUC := promotionUseCase.NewPromotionUseCase(repos.promotionRepo)
-	checkoutUC := checkoutUseCase.NewCheckoutUseCase(repos.checkoutRepo, repos.cartRepo, promotionUC)
+	cartUC := cartUseCase.NewCartUseCase(repos.cartRepo, repos.productRepo, promotionUC)
+	checkoutUC := checkoutUseCase.NewCheckoutUseCase(repos.checkoutRepo, repos.cartRepo, repos.promotionRepo, txManager)
 
 	// Initialize user use case with JWT configuration from config
 	userUC := userUseCase.NewUserUseCase(
@@ -288,7 +301,7 @@ func createAPIHandler(useCases *useCases, middlewareFactory *middleware.Factory)
 	mux.Handle("/api/v1/products/", productRBAC.Wrap(productBaseHandler))
 
 	// Cart API with operation-based RBAC
-	cartBaseHandler := cartPort.NewHTTPServer(useCases.cartUseCase)
+	cartBaseHandler := cartPort.NewHTTPServer(useCases.cartUseCase, useCases.promotionUseCase)
 	cartRBAC := middleware.NewRBACMiddleware(middlewareFactory).
 		// GetCart require customer role
 		WithOperation("GetCart", middleware.AuthTypeRoleCustomer, middleware.AuthTypeRoleAdmin).

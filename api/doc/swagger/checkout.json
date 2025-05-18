@@ -59,18 +59,8 @@
           {
             "in": "body",
             "name": "body",
-            "required": true,
+            "required": false,
             "schema": {
-              "properties": {
-                "cart_id": {
-                  "description": "ID of the cart to checkout",
-                  "format": "uuid",
-                  "type": "string"
-                }
-              },
-              "required": [
-                "cart_id"
-              ],
               "type": "object"
             }
           }
@@ -84,6 +74,12 @@
           },
           "400": {
             "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
             "schema": {
               "$ref": "#/definitions/ErrorResponse"
             }
@@ -107,10 +103,15 @@
             }
           }
         },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
         "tags": [
           "Checkout"
         ],
-        "description": "Process cart and create a checkout",
+        "description": "Process the current user's cart and create a checkout. User is identified from the Authorization header.",
         "summary": "Create a new checkout"
       }
     },
@@ -155,14 +156,189 @@
         "description": "Retrieves a checkout by its ID",
         "summary": "Get checkout by ID"
       }
+    },
+    "/api/v1/checkouts/{id}/payment": {
+      "put": {
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "description": "Checkout ID",
+            "format": "uuid",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/PaymentStatusUpdateRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Payment status updated",
+            "schema": {
+              "$ref": "#/definitions/SuccessResponse"
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "404": {
+            "description": "Checkout not found",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        },
+        "tags": [
+          "Payment"
+        ],
+        "description": "Updates the payment status of a checkout",
+        "summary": "Update payment status"
+      }
+    },
+    "/api/v1/checkouts/{id}/status": {
+      "put": {
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "description": "Checkout ID",
+            "format": "uuid",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/OrderStatusUpdateRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Order status updated",
+            "schema": {
+              "$ref": "#/definitions/SuccessResponse"
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "404": {
+            "description": "Checkout not found",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        },
+        "tags": [
+          "Order"
+        ],
+        "description": "Updates the order status of a checkout",
+        "summary": "Update order status"
+      }
+    },
+    "/api/v1/users/{user_id}/orders": {
+      "get": {
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "description": "User ID",
+            "format": "uuid",
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "default": 1,
+            "description": "Page number",
+            "in": "query",
+            "name": "page",
+            "type": "integer"
+          },
+          {
+            "default": 10,
+            "description": "Number of items per page",
+            "in": "query",
+            "name": "limit",
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/OrderListResponse"
+            }
+          },
+          "404": {
+            "description": "User not found",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        },
+        "tags": [
+          "Order"
+        ],
+        "description": "Retrieves a list of orders for a specific user",
+        "summary": "Get user orders"
+      }
     }
   },
   "definitions": {
     "Checkout": {
       "properties": {
-        "cart_id": {
-          "format": "uuid",
-          "type": "string"
+        "completed_at": {
+          "format": "date-time",
+          "type": "string",
+          "x-nullable": true
         },
         "created_at": {
           "format": "date-time",
@@ -178,11 +354,42 @@
           },
           "type": "array"
         },
+        "notes": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "payment_method": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "payment_reference": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "payment_status": {
+          "enum": [
+            "PENDING",
+            "PAID",
+            "FAILED",
+            "REFUNDED"
+          ],
+          "type": "string"
+        },
         "promotions": {
           "items": {
             "$ref": "#/definitions/PromotionApplied"
           },
           "type": "array"
+        },
+        "status": {
+          "enum": [
+            "CREATED",
+            "PROCESSING",
+            "SHIPPED",
+            "DELIVERED",
+            "CANCELLED"
+          ],
+          "type": "string"
         },
         "subtotal": {
           "format": "float",
@@ -195,6 +402,15 @@
         "total_discount": {
           "format": "float",
           "type": "number"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "user_id": {
+          "format": "uuid",
+          "type": "string",
+          "x-nullable": true
         }
       },
       "type": "object"
@@ -284,16 +500,31 @@
     },
     "CheckoutSummary": {
       "properties": {
-        "cart_id": {
-          "format": "uuid",
-          "type": "string"
-        },
         "created_at": {
           "format": "date-time",
           "type": "string"
         },
         "id": {
           "format": "uuid",
+          "type": "string"
+        },
+        "payment_status": {
+          "enum": [
+            "PENDING",
+            "PAID",
+            "FAILED",
+            "REFUNDED"
+          ],
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "CREATED",
+            "PROCESSING",
+            "SHIPPED",
+            "DELIVERED",
+            "CANCELLED"
+          ],
           "type": "string"
         },
         "subtotal": {
@@ -307,6 +538,11 @@
         "total_discount": {
           "format": "float",
           "type": "number"
+        },
+        "user_id": {
+          "format": "uuid",
+          "type": "string",
+          "x-nullable": true
         }
       },
       "type": "object"
@@ -339,6 +575,103 @@
       ],
       "type": "object"
     },
+    "OrderListResponse": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/StandardResponse"
+        },
+        {
+          "properties": {
+            "data": {
+              "properties": {
+                "meta": {
+                  "$ref": "#/definitions/PaginationMeta"
+                },
+                "orders": {
+                  "items": {
+                    "$ref": "#/definitions/OrderSummary"
+                  },
+                  "type": "array"
+                }
+              },
+              "type": "object"
+            }
+          },
+          "type": "object"
+        }
+      ]
+    },
+    "OrderStatusUpdateRequest": {
+      "properties": {
+        "status": {
+          "description": "New order status",
+          "enum": [
+            "CREATED",
+            "PROCESSING",
+            "SHIPPED",
+            "DELIVERED",
+            "CANCELLED"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "type": "object"
+    },
+    "OrderSummary": {
+      "properties": {
+        "completed_at": {
+          "format": "date-time",
+          "type": "string",
+          "x-nullable": true
+        },
+        "created_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "item_count": {
+          "type": "integer"
+        },
+        "payment_status": {
+          "enum": [
+            "PENDING",
+            "PAID",
+            "FAILED",
+            "REFUNDED"
+          ],
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "CREATED",
+            "PROCESSING",
+            "SHIPPED",
+            "DELIVERED",
+            "CANCELLED"
+          ],
+          "type": "string"
+        },
+        "subtotal": {
+          "format": "float",
+          "type": "number"
+        },
+        "total": {
+          "format": "float",
+          "type": "number"
+        },
+        "total_discount": {
+          "format": "float",
+          "type": "number"
+        }
+      },
+      "type": "object"
+    },
     "PaginationMeta": {
       "properties": {
         "current_page": {
@@ -354,6 +687,32 @@
           "type": "integer"
         }
       },
+      "type": "object"
+    },
+    "PaymentStatusUpdateRequest": {
+      "properties": {
+        "payment_method": {
+          "description": "Payment method used (e.g. \"CREDIT_CARD\", \"PAYPAL\", \"BANK_TRANSFER\")",
+          "type": "string"
+        },
+        "payment_reference": {
+          "description": "Reference number or transaction ID from payment provider",
+          "type": "string"
+        },
+        "status": {
+          "description": "New payment status",
+          "enum": [
+            "PENDING",
+            "PAID",
+            "FAILED",
+            "REFUNDED"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "status"
+      ],
       "type": "object"
     },
     "PromotionApplied": {
@@ -407,6 +766,22 @@
         "server_time"
       ],
       "type": "object"
+    },
+    "SuccessResponse": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/StandardResponse"
+        },
+        {
+          "properties": {
+            "data": {
+              "type": "object",
+              "x-nullable": true
+            }
+          },
+          "type": "object"
+        }
+      ]
     }
   },
   "tags": [
@@ -417,6 +792,10 @@
     {
       "description": "Payment processing operations",
       "name": "Payment"
+    },
+    {
+      "description": "Order management operations",
+      "name": "Order"
     }
   ],
   "x-components": {}

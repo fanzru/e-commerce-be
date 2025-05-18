@@ -15,35 +15,6 @@ tags:
     description: Operations for managing items in a cart
 
 paths:
-  /api/v1/carts:
-    post:
-      tags:
-        - Cart
-      operationId: createCart
-      summary: Create a new cart
-      description: Creates a new empty shopping cart
-      security:
-        - BearerAuth: []
-      responses:
-        "201":
-          description: Cart created
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CartResponse"
-        "401":
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "500":
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-
   /api/v1/carts/me:
     get:
       tags:
@@ -77,7 +48,7 @@ paths:
       tags:
         - Cart Items
       operationId: addItemToCurrentUserCart
-      summary: Add item to current user's cart
+      summary: Add item to cart
       description: Adds a new item to the current user's cart or updates quantity if already exists
       security:
         - BearerAuth: []
@@ -119,7 +90,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "404":
-          description: Cart or product not found
+          description: Product not found
           content:
             application/json:
               schema:
@@ -131,161 +102,8 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
-  /api/v1/carts/{id}:
+  /api/v1/carts/me/items/{itemId}:
     parameters:
-      - name: id
-        in: path
-        required: true
-        description: Cart ID
-        schema:
-          type: string
-          format: uuid
-
-    get:
-      tags:
-        - Cart
-      operationId: getCart
-      summary: Get cart by ID
-      description: Retrieves a cart by its ID with all items
-      security:
-        - BearerAuth: []
-      responses:
-        "200":
-          description: Success
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CartResponse"
-        "401":
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "404":
-          description: Cart not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "500":
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-
-    delete:
-      tags:
-        - Cart
-      operationId: deleteCart
-      summary: Delete cart
-      description: Deletes a cart and all its items
-      security:
-        - BearerAuth: []
-      responses:
-        "204":
-          description: Cart deleted
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/StandardResponse"
-        "401":
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "404":
-          description: Cart not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "500":
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-
-  /api/v1/carts/{id}/items:
-    parameters:
-      - name: id
-        in: path
-        required: true
-        description: Cart ID
-        schema:
-          type: string
-          format: uuid
-
-    post:
-      tags:
-        - Cart Items
-      operationId: addItemToCart
-      summary: Add item to cart
-      description: Adds a new item to the cart or updates quantity if already exists
-      security:
-        - BearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                product_id:
-                  type: string
-                  format: uuid
-                  description: ID of the product to add
-                quantity:
-                  type: integer
-                  minimum: 1
-                  description: Quantity to add
-              required:
-                - product_id
-                - quantity
-      responses:
-        "200":
-          description: Item added or updated
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CartItemResponse"
-        "400":
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "401":
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "404":
-          description: Cart or product not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "500":
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-
-  /api/v1/carts/{cartId}/items/{itemId}:
-    parameters:
-      - name: cartId
-        in: path
-        required: true
-        description: Cart ID
-        schema:
-          type: string
-          format: uuid
       - name: itemId
         in: path
         required: true
@@ -335,7 +153,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "404":
-          description: Cart or item not found
+          description: Item not found
           content:
             application/json:
               schema:
@@ -369,7 +187,36 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "404":
-          description: Cart or item not found
+          description: Item not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/carts/me/clear:
+    delete:
+      tags:
+        - Cart
+      operationId: clearUserCart
+      summary: Clear user cart
+      description: Removes all items from the user's cart
+      security:
+        - BearerAuth: []
+      responses:
+        "204":
+          description: Cart cleared
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StandardResponse"
+        "401":
+          description: Unauthorized
           content:
             application/json:
               schema:
@@ -391,11 +238,6 @@ components:
   schemas:
     StandardResponse:
       type: object
-      required:
-        - data
-        - message
-        - code
-        - server_time
       properties:
         data:
           type: object
@@ -410,13 +252,14 @@ components:
           type: string
           format: date-time
           description: Server timestamp
-
-    ErrorResponse:
-      type: object
       required:
+        - data
         - message
         - code
         - server_time
+
+    ErrorResponse:
+      type: object
       properties:
         message:
           type: string
@@ -432,6 +275,10 @@ components:
           type: string
           format: date-time
           description: Server timestamp
+      required:
+        - message
+        - code
+        - server_time
 
     CartResponse:
       allOf:
@@ -452,9 +299,6 @@ components:
     Cart:
       type: object
       properties:
-        id:
-          type: string
-          format: uuid
         user_id:
           type: string
           format: uuid
@@ -467,6 +311,19 @@ components:
         subtotal:
           type: number
           format: float
+        applicable_promotions:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApplicablePromotion"
+          description: List of promotions that can be applied to this cart
+        potential_discount:
+          type: number
+          format: float
+          description: Total potential discount if all applicable promotions are applied
+        potential_total:
+          type: number
+          format: float
+          description: Potential total after applying all available discounts
         created_at:
           type: string
           format: date-time
@@ -481,10 +338,10 @@ components:
           type: string
           format: uuid
           description: Cart item ID
-        cart_id:
+        user_id:
           type: string
           format: uuid
-          description: Cart ID
+          description: User ID who owns this cart item
         product_id:
           type: string
           format: uuid
@@ -514,3 +371,21 @@ components:
           type: string
           format: date-time
           description: Last update timestamp
+
+    ApplicablePromotion:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Promotion ID
+        type:
+          type: string
+          description: Promotion type
+        description:
+          type: string
+          description: Promotion description
+        discount:
+          type: number
+          format: float
+          description: Discount amount for this promotion

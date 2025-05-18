@@ -4,10 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	cartEntity "github.com/fanzru/e-commerce-be/internal/app/cart/domain/entity"
+	domainErrors "github.com/fanzru/e-commerce-be/internal/app/cart/domain/errs"
 	cartRepo "github.com/fanzru/e-commerce-be/internal/app/cart/repo"
 	productRepo "github.com/fanzru/e-commerce-be/internal/app/product/repo"
+	promotionUseCase "github.com/fanzru/e-commerce-be/internal/app/promotion/usecase"
 	"github.com/fanzru/e-commerce-be/internal/infrastructure/middleware"
 	"github.com/google/uuid"
 )
@@ -17,250 +20,337 @@ var _ CartUseCase = (*cartUseCase)(nil)
 
 // cartUseCase implements the CartUseCase interface
 type cartUseCase struct {
-	cartRepo    cartRepo.CartRepository
-	productRepo productRepo.ProductRepository
+	cartRepo         cartRepo.CartRepository
+	productRepo      productRepo.ProductRepository
+	promotionUseCase promotionUseCase.PromotionUseCase
 }
 
 // NewCartUseCase creates a new instance of cartUseCase
 func NewCartUseCase(
 	cartRepo cartRepo.CartRepository,
 	productRepo productRepo.ProductRepository,
+	promotionUseCase promotionUseCase.PromotionUseCase,
 ) CartUseCase {
 	return &cartUseCase{
-		cartRepo:    cartRepo,
-		productRepo: productRepo,
+		cartRepo:         cartRepo,
+		productRepo:      productRepo,
+		promotionUseCase: promotionUseCase,
 	}
 }
 
-// Create creates a new empty cart
-func (u *cartUseCase) Create(ctx context.Context) (*cartEntity.Cart, error) {
-	cart := cartEntity.NewCart()
-	err := u.cartRepo.Create(ctx, cart)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create cart: %w", err)
-	}
-	return cart, nil
-}
+// GetUserCart retrieves the cart for a user
+func (u *cartUseCase) GetUserCart(ctx context.Context, userID uuid.UUID) (*cartEntity.Cart, error) {
+	logger := middleware.Logger.With(
+		"method", "CartUseCase.GetUserCart",
+		"user_id", userID.String(),
+	)
+	logger.Info("Retrieving user cart")
+	startTime := time.Now()
 
-// GetByID retrieves a cart by its ID with all items
-func (u *cartUseCase) GetByID(ctx context.Context, id uuid.UUID) (*cartEntity.Cart, error) {
-	if id == uuid.Nil {
-		return nil, errors.New("invalid cart ID")
-	}
-	return u.cartRepo.GetByID(ctx, id)
-}
-
-// Delete deletes a cart by its ID
-func (u *cartUseCase) Delete(ctx context.Context, id uuid.UUID) error {
-	if id == uuid.Nil {
-		return errors.New("invalid cart ID")
-	}
-	return u.cartRepo.Delete(ctx, id)
-}
-
-// AddItem adds a product to a cart
-func (u *cartUseCase) AddItem(ctx context.Context, cartID, productID uuid.UUID, quantity int) (*cartEntity.CartItem, error) {
-	if cartID == uuid.Nil {
-		return nil, errors.New("invalid cart ID")
-	}
-	if productID == uuid.Nil {
-		return nil, errors.New("invalid product ID")
-	}
-	if quantity <= 0 {
-		return nil, errors.New("quantity must be greater than zero")
-	}
-
-	// Get the cart
-	cart, err := u.cartRepo.GetByID(ctx, cartID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get cart: %w", err)
-	}
-
-	// Get the product
-	product, err := u.productRepo.GetByID(ctx, productID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get product: %w", err)
-	}
-
-	// Check if there's enough inventory
-	if !product.HasEnoughInventory(quantity) {
-		return nil, errors.New("not enough inventory")
-	}
-
-	// Check if the item already exists in the cart
-	item := cart.GetItem(productID)
-	if item != nil {
-		// Update quantity if item exists
-		newQuantity := item.Quantity + quantity
-		if !product.HasEnoughInventory(newQuantity) {
-			return nil, errors.New("not enough inventory")
-		}
-
-		err = u.cartRepo.UpdateItem(ctx, item.ID, newQuantity)
-		if err != nil {
-			return nil, fmt.Errorf("failed to update cart item: %w", err)
-		}
-
-		// Get updated item
-		updatedItem, err := u.cartRepo.GetItem(ctx, cartID, item.ID)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get updated cart item: %w", err)
-		}
-		return updatedItem, nil
-	}
-
-	// Add new item to cart
-	cartItem := &cartEntity.CartItem{
-		ID:          uuid.New(),
-		CartID:      cartID,
-		ProductID:   productID,
-		ProductSKU:  product.SKU,
-		ProductName: product.Name,
-		UnitPrice:   product.Price,
-		Quantity:    quantity,
-	}
-
-	err = u.cartRepo.AddItem(ctx, cartItem)
-	if err != nil {
-		return nil, fmt.Errorf("failed to add item to cart: %w", err)
-	}
-
-	return cartItem, nil
-}
-
-// UpdateItemQuantity updates the quantity of a cart item
-func (u *cartUseCase) UpdateItemQuantity(ctx context.Context, cartID, itemID uuid.UUID, quantity int) error {
-	if cartID == uuid.Nil {
-		return errors.New("invalid cart ID")
-	}
-	if itemID == uuid.Nil {
-		return errors.New("invalid item ID")
-	}
-	if quantity < 0 {
-		return errors.New("quantity cannot be negative")
-	}
-
-	// Get the cart item
-	item, err := u.cartRepo.GetItem(ctx, cartID, itemID)
-	if err != nil {
-		return fmt.Errorf("failed to get cart item: %w", err)
-	}
-
-	// Get the product to check inventory
-	product, err := u.productRepo.GetByID(ctx, item.ProductID)
-	if err != nil {
-		return fmt.Errorf("failed to get product: %w", err)
-	}
-
-	// If quantity is 0, remove the item
-	if quantity == 0 {
-		return u.cartRepo.DeleteItem(ctx, cartID, itemID)
-	}
-
-	// Check if there's enough inventory
-	if !product.HasEnoughInventory(quantity) {
-		return errors.New("not enough inventory")
-	}
-
-	// Update the item quantity
-	return u.cartRepo.UpdateItem(ctx, itemID, quantity)
-}
-
-// RemoveItem removes an item from a cart
-func (u *cartUseCase) RemoveItem(ctx context.Context, cartID, itemID uuid.UUID) error {
-	if cartID == uuid.Nil {
-		return errors.New("invalid cart ID")
-	}
-	if itemID == uuid.Nil {
-		return errors.New("invalid item ID")
-	}
-
-	return u.cartRepo.DeleteItem(ctx, cartID, itemID)
-}
-
-// CreateForUser creates a new empty cart for a specific user
-func (u *cartUseCase) CreateForUser(ctx context.Context, userID uuid.UUID) (*cartEntity.Cart, error) {
-	// Check if user already has a cart
-	existingCart, err := u.cartRepo.GetByUserID(ctx, userID)
-	if err == nil && existingCart != nil {
-		return existingCart, nil
-	}
-
-	// Create a new cart with user ID
-	cart := cartEntity.NewCartWithUser(userID)
-	err = u.cartRepo.Create(ctx, cart)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create cart: %w", err)
-	}
-	return cart, nil
-}
-
-// GetByUserID retrieves a cart by user ID
-func (u *cartUseCase) GetByUserID(ctx context.Context, userID uuid.UUID) (*cartEntity.Cart, error) {
 	if userID == uuid.Nil {
+		logger.Warn("Invalid user ID")
 		return nil, errors.New("invalid user ID")
 	}
 
 	cart, err := u.cartRepo.GetByUserID(ctx, userID)
 	if err != nil {
-		// If no cart found, create a new one for the user
-		if errors.Is(err, cartRepo.ErrCartNotFound) {
-			return u.CreateForUser(ctx, userID)
-		}
+		logger.Error("Failed to get cart", "error", err.Error())
 		return nil, err
 	}
+
+	itemCount := len(cart.Items)
+	duration := time.Since(startTime)
+	logger.Info("Successfully retrieved cart",
+		"item_count", itemCount,
+		"subtotal", cart.Subtotal(),
+		"duration_ms", duration.Milliseconds())
 
 	return cart, nil
 }
 
-// AddItemToUserCart adds a product to a user's cart (creates cart if needed)
+// AddItemToUserCart adds a product to a user's cart
 func (u *cartUseCase) AddItemToUserCart(ctx context.Context, userID, productID uuid.UUID, quantity int) (*cartEntity.CartItem, error) {
-	// Create a logger with context information
 	logger := middleware.Logger.With(
-		"method", "AddItemToUserCart",
+		"method", "CartUseCase.AddItemToUserCart",
 		"user_id", userID.String(),
 		"product_id", productID.String(),
 		"quantity", quantity,
 	)
-
-	logger.Info("Starting to add item to user cart")
+	logger.Info("Adding item to user cart")
+	startTime := time.Now()
 
 	if userID == uuid.Nil {
-		logger.Error("Invalid user ID")
+		logger.Warn("Invalid user ID")
 		return nil, errors.New("invalid user ID")
 	}
 	if productID == uuid.Nil {
-		logger.Error("Invalid product ID")
+		logger.Warn("Invalid product ID")
 		return nil, errors.New("invalid product ID")
 	}
 	if quantity <= 0 {
-		logger.Error("Invalid quantity", "quantity", quantity)
+		logger.Warn("Invalid quantity", "quantity", quantity)
 		return nil, errors.New("quantity must be greater than zero")
 	}
 
-	// Get or create cart for user
-	logger.Debug("Fetching or creating cart for user")
-	cart, err := u.GetByUserID(ctx, userID)
-	if err != nil {
-		logger.Error("Failed to get or create cart", "error", err.Error())
-		return nil, fmt.Errorf("failed to get or create cart: %w", err)
+	// Check if the user already has this product in cart
+	logger.Debug("Checking if user already has this product in cart")
+	existingItem, err := u.cartRepo.GetItemByProductID(ctx, userID, productID)
+	if err != nil && !errors.Is(err, domainErrors.ErrItemNotFound) {
+		logger.Error("Failed to check for existing item", "error", err.Error())
+		return nil, fmt.Errorf("failed to check for existing item: %w", err)
 	}
 
-	logger.Info("Successfully retrieved cart", "cart_id", cart.ID.String())
+	if existingItem != nil {
+		// Update existing item quantity
+		logger.Debug("Product already in cart, updating quantity", "existing_quantity", existingItem.Quantity)
+		err = u.cartRepo.UpdateItem(ctx, existingItem.ID, existingItem.Quantity+quantity)
+		if err != nil {
+			logger.Error("Failed to update existing cart item", "error", err.Error())
+			return nil, fmt.Errorf("failed to update existing cart item: %w", err)
+		}
+
+		// Get the updated item
+		updatedItem, err := u.cartRepo.GetItemByProductID(ctx, userID, productID)
+		if err != nil {
+			logger.Error("Failed to get updated cart item", "error", err.Error())
+			return nil, fmt.Errorf("failed to get updated cart item: %w", err)
+		}
+		return updatedItem, nil
+	}
+
+	// Get the product
+	logger.Debug("Fetching product")
+	product, err := u.productRepo.GetByID(ctx, productID)
+	if err != nil {
+		logger.Error("Failed to get product", "error", err.Error())
+		return nil, fmt.Errorf("failed to get product: %w", err)
+	}
+
+	// Check if there's enough inventory
+	if !product.HasEnoughInventory(quantity) {
+		logger.Warn("Not enough inventory",
+			"product_id", productID.String(),
+			"requested", quantity,
+			"available", product.Inventory)
+		return nil, errors.New("not enough inventory")
+	}
+
+	// Create a new cart item
+	item := &cartEntity.CartItem{
+		ID:        uuid.New(),
+		UserID:    userID,
+		ProductID: productID,
+		Quantity:  quantity,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
 
 	// Add the item to the cart
-	logger.Debug("Adding item to cart", "cart_id", cart.ID.String())
-	item, err := u.AddItem(ctx, cart.ID, productID, quantity)
+	err = u.cartRepo.AddItem(ctx, item)
 	if err != nil {
 		logger.Error("Failed to add item to cart", "error", err.Error())
+		return nil, fmt.Errorf("failed to add item to cart: %w", err)
+	}
+
+	// Get the updated item
+	updatedItem, err := u.cartRepo.GetItemByProductID(ctx, userID, productID)
+	if err != nil {
+		logger.Error("Failed to get updated cart item", "error", err.Error())
+		return nil, fmt.Errorf("failed to get updated cart item: %w", err)
+	}
+
+	duration := time.Since(startTime)
+	logger.Info("Successfully added item to user cart",
+		"item_id", updatedItem.ID.String(),
+		"product_id", updatedItem.ProductID,
+		"quantity", updatedItem.Quantity,
+		"duration_ms", duration.Milliseconds())
+
+	return updatedItem, nil
+}
+
+// UpdateItemQuantity updates the quantity of a cart item
+func (u *cartUseCase) UpdateItemQuantity(ctx context.Context, userID, itemID uuid.UUID, quantity int) error {
+	logger := middleware.Logger.With(
+		"method", "CartUseCase.UpdateItemQuantity",
+		"user_id", userID.String(),
+		"item_id", itemID.String(),
+		"quantity", quantity,
+	)
+	logger.Info("Updating item quantity")
+	startTime := time.Now()
+
+	if userID == uuid.Nil {
+		logger.Warn("Invalid user ID")
+		return errors.New("invalid user ID")
+	}
+	if itemID == uuid.Nil {
+		logger.Warn("Invalid item ID")
+		return errors.New("invalid item ID")
+	}
+
+	// If quantity is 0 or negative, remove the item
+	if quantity <= 0 {
+		logger.Debug("Quantity is zero or negative, removing item")
+		return u.RemoveItem(ctx, userID, itemID)
+	}
+
+	// Get the item to check the product ID
+	item, err := u.cartRepo.GetItem(ctx, userID, itemID)
+	if err != nil {
+		logger.Error("Failed to get cart item", "error", err.Error())
+		return fmt.Errorf("failed to get cart item: %w", err)
+	}
+
+	// Check inventory before updating
+	product, err := u.productRepo.GetByID(ctx, item.ProductID)
+	if err != nil {
+		logger.Error("Failed to get product", "error", err.Error())
+		return fmt.Errorf("failed to get product: %w", err)
+	}
+
+	if !product.HasEnoughInventory(quantity) {
+		logger.Warn("Not enough inventory",
+			"product_id", product.ID.String(),
+			"requested", quantity,
+			"available", product.Inventory)
+		return errors.New("not enough inventory")
+	}
+
+	// Update the item quantity
+	err = u.cartRepo.UpdateItem(ctx, itemID, quantity)
+	if err != nil {
+		logger.Error("Failed to update cart item", "error", err.Error())
+		return fmt.Errorf("failed to update cart item: %w", err)
+	}
+
+	duration := time.Since(startTime)
+	logger.Info("Successfully updated cart item quantity",
+		"quantity", quantity,
+		"duration_ms", duration.Milliseconds())
+
+	return nil
+}
+
+// RemoveItem removes an item from a user's cart
+func (u *cartUseCase) RemoveItem(ctx context.Context, userID, itemID uuid.UUID) error {
+	logger := middleware.Logger.With(
+		"method", "CartUseCase.RemoveItem",
+		"user_id", userID.String(),
+		"item_id", itemID.String(),
+	)
+	logger.Info("Removing item from cart")
+	startTime := time.Now()
+
+	if userID == uuid.Nil {
+		logger.Warn("Invalid user ID")
+		return errors.New("invalid user ID")
+	}
+	if itemID == uuid.Nil {
+		logger.Warn("Invalid item ID")
+		return errors.New("invalid item ID")
+	}
+
+	err := u.cartRepo.DeleteItem(ctx, userID, itemID)
+	if err != nil {
+		logger.Error("Failed to remove cart item", "error", err.Error())
+		return fmt.Errorf("failed to remove cart item: %w", err)
+	}
+
+	duration := time.Since(startTime)
+	logger.Info("Successfully removed cart item",
+		"duration_ms", duration.Milliseconds())
+
+	return nil
+}
+
+// ClearUserCart removes all items from a user's cart
+func (u *cartUseCase) ClearUserCart(ctx context.Context, userID uuid.UUID) error {
+	logger := middleware.Logger.With(
+		"method", "CartUseCase.ClearUserCart",
+		"user_id", userID.String(),
+	)
+	logger.Info("Clearing user cart")
+	startTime := time.Now()
+
+	if userID == uuid.Nil {
+		logger.Warn("Invalid user ID")
+		return errors.New("invalid user ID")
+	}
+
+	err := u.cartRepo.ClearUserCart(ctx, userID)
+	if err != nil {
+		logger.Error("Failed to clear user cart", "error", err.Error())
+		return fmt.Errorf("failed to clear user cart: %w", err)
+	}
+
+	duration := time.Since(startTime)
+	logger.Info("Successfully cleared user cart",
+		"duration_ms", duration.Milliseconds())
+
+	return nil
+}
+
+// GetUserCartInfo retrieves the cart with product details for a user
+func (u *cartUseCase) GetUserCartInfo(ctx context.Context, userID uuid.UUID) (*cartEntity.CartInfo, error) {
+	logger := middleware.Logger.With(
+		"method", "CartUseCase.GetUserCartInfo",
+		"user_id", userID.String(),
+	)
+	logger.Info("Retrieving user cart with product details")
+	startTime := time.Now()
+
+	if userID == uuid.Nil {
+		logger.Warn("Invalid user ID")
+		return nil, errors.New("invalid user ID")
+	}
+
+	cartInfo, err := u.cartRepo.GetCartInfo(ctx, userID)
+	if err != nil {
+		logger.Error("Failed to get cart info", "error", err.Error())
 		return nil, err
 	}
 
-	logger.Info("Successfully added item to cart",
-		"cart_id", cart.ID.String(),
-		"item_id", item.ID.String(),
-		"product_id", item.ProductID.String(),
-		"quantity", item.Quantity)
+	// Apply promotions if cart is not empty
+	if len(cartInfo.Items) > 0 {
+		// Get applicable promotions from promotion service
+		promotions, totalDiscount, err := u.promotionUseCase.ApplyPromotions(ctx, cartInfo)
+		if err != nil {
+			logger.Error("Failed to apply promotions", "error", err.Error())
+			// Continue without promotions if there's an error
+		} else {
+			// Convert promotion discounts to cart's ApplicablePromotion type
+			applicablePromotions := make([]cartEntity.ApplicablePromotion, 0, len(promotions))
+			for _, p := range promotions {
+				applicablePromotions = append(applicablePromotions, cartEntity.ApplicablePromotion{
+					ID:          p.PromotionID,
+					Type:        p.PromotionType,
+					Description: p.Description,
+					Discount:    p.Discount,
+				})
+			}
 
-	return item, nil
+			// Apply promotions to cart
+			cartInfo.ApplicablePromotions = applicablePromotions
+			cartInfo.PotentialDiscount = totalDiscount
+			cartInfo.PotentialTotal = cartInfo.Subtotal - totalDiscount
+			if cartInfo.PotentialTotal < 0 {
+				cartInfo.PotentialTotal = 0
+			}
+
+			logger.Info("Applied promotions to cart",
+				"applicable_promotions_count", len(applicablePromotions),
+				"total_discount", totalDiscount)
+		}
+	}
+
+	itemCount := len(cartInfo.Items)
+	duration := time.Since(startTime)
+	logger.Info("Successfully retrieved cart info",
+		"item_count", itemCount,
+		"subtotal", cartInfo.Subtotal,
+		"potential_total", cartInfo.PotentialTotal,
+		"duration_ms", duration.Milliseconds())
+
+	return cartInfo, nil
 }

@@ -13,6 +13,8 @@ tags:
     description: Checkout operations
   - name: Payment
     description: Payment processing operations
+  - name: Order
+    description: Order management operations
 
 paths:
   /api/v1/checkouts:
@@ -51,20 +53,15 @@ paths:
       tags:
         - Checkout
       summary: Create a new checkout
-      description: Process cart and create a checkout
+      description: Process the current user's cart and create a checkout. User is identified from the Authorization header.
+      security:
+        - BearerAuth: []
       requestBody:
-        required: true
+        required: false
         content:
           application/json:
             schema:
               type: object
-              properties:
-                cart_id:
-                  type: string
-                  format: uuid
-                  description: ID of the cart to checkout
-              required:
-                - cart_id
       responses:
         "201":
           description: Checkout created
@@ -74,6 +71,12 @@ paths:
                 $ref: "#/components/schemas/CheckoutResponse"
         "400":
           description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
           content:
             application/json:
               schema:
@@ -131,15 +134,148 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /api/v1/users/{user_id}/orders:
+    get:
+      tags:
+        - Order
+      summary: Get user orders
+      description: Retrieves a list of orders for a specific user
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          description: User ID
+          schema:
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          description: Page number
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          description: Number of items per page
+          schema:
+            type: integer
+            default: 10
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderListResponse"
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/checkouts/{id}/payment:
+    put:
+      tags:
+        - Payment
+      summary: Update payment status
+      description: Updates the payment status of a checkout
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Checkout ID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaymentStatusUpdateRequest"
+      responses:
+        "200":
+          description: Payment status updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Checkout not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/checkouts/{id}/status:
+    put:
+      tags:
+        - Order
+      summary: Update order status
+      description: Updates the order status of a checkout
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Checkout ID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderStatusUpdateRequest"
+      responses:
+        "200":
+          description: Order status updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Checkout not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
     StandardResponse:
       type: object
-      required:
-        - data
-        - message
-        - code
-        - server_time
       properties:
         data:
           type: object
@@ -154,13 +290,23 @@ components:
           type: string
           format: date-time
           description: Server timestamp
-
-    ErrorResponse:
-      type: object
       required:
+        - data
         - message
         - code
         - server_time
+
+    SuccessResponse:
+      allOf:
+        - $ref: "#/components/schemas/StandardResponse"
+        - type: object
+          properties:
+            data:
+              type: object
+              nullable: true
+
+    ErrorResponse:
+      type: object
       properties:
         message:
           type: string
@@ -176,6 +322,10 @@ components:
           type: string
           format: date-time
           description: Server timestamp
+      required:
+        - message
+        - code
+        - server_time
 
     CheckoutListResponse:
       allOf:
@@ -192,6 +342,21 @@ components:
                 meta:
                   $ref: "#/components/schemas/PaginationMeta"
 
+    OrderListResponse:
+      allOf:
+        - $ref: "#/components/schemas/StandardResponse"
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                orders:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/OrderSummary"
+                meta:
+                  $ref: "#/components/schemas/PaginationMeta"
+
     CheckoutResponse:
       allOf:
         - $ref: "#/components/schemas/StandardResponse"
@@ -199,6 +364,32 @@ components:
           properties:
             data:
               $ref: "#/components/schemas/Checkout"
+
+    PaymentStatusUpdateRequest:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [PENDING, PAID, FAILED, REFUNDED]
+          description: New payment status
+        payment_method:
+          type: string
+          description: Payment method used (e.g. "CREDIT_CARD", "PAYPAL", "BANK_TRANSFER")
+        payment_reference:
+          type: string
+          description: Reference number or transaction ID from payment provider
+      required:
+        - status
+
+    OrderStatusUpdateRequest:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [CREATED, PROCESSING, SHIPPED, DELIVERED, CANCELLED]
+          description: New order status
+      required:
+        - status
 
     PaginationMeta:
       type: object
@@ -211,15 +402,23 @@ components:
           type: integer
         total_pages:
           type: integer
+
     CheckoutSummary:
       type: object
       properties:
         id:
           type: string
           format: uuid
-        cart_id:
+        user_id:
           type: string
           format: uuid
+          nullable: true
+        payment_status:
+          type: string
+          enum: [PENDING, PAID, FAILED, REFUNDED]
+        status:
+          type: string
+          enum: [CREATED, PROCESSING, SHIPPED, DELIVERED, CANCELLED]
         subtotal:
           type: number
           format: float
@@ -232,15 +431,48 @@ components:
         created_at:
           type: string
           format: date-time
+
+    OrderSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        payment_status:
+          type: string
+          enum: [PENDING, PAID, FAILED, REFUNDED]
+        status:
+          type: string
+          enum: [CREATED, PROCESSING, SHIPPED, DELIVERED, CANCELLED]
+        subtotal:
+          type: number
+          format: float
+        total_discount:
+          type: number
+          format: float
+        total:
+          type: number
+          format: float
+        item_count:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+
     Checkout:
       type: object
       properties:
         id:
           type: string
           format: uuid
-        cart_id:
+        user_id:
           type: string
           format: uuid
+          nullable: true
         items:
           type: array
           items:
@@ -258,9 +490,32 @@ components:
         total:
           type: number
           format: float
+        payment_status:
+          type: string
+          enum: [PENDING, PAID, FAILED, REFUNDED]
+        payment_method:
+          type: string
+          nullable: true
+        payment_reference:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [CREATED, PROCESSING, SHIPPED, DELIVERED, CANCELLED]
         created_at:
           type: string
           format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+
     CheckoutItem:
       type: object
       properties:
@@ -291,6 +546,7 @@ components:
         total:
           type: number
           format: float
+
     PromotionApplied:
       type: object
       properties:

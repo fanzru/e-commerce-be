@@ -58,6 +58,14 @@ deps:
 	go mod tidy
 	go mod vendor
 
+# Run Docker container
+docker-run:
+	./scripts/docker-run.sh
+
+# Build Docker image
+docker-build:
+	./scripts/docker-build.sh
+
 # Help target
 help:
 	@echo "Available targets:"
@@ -73,4 +81,6 @@ help:
 	@echo "  test         - Run tests"
 	@echo "  lint         - Run linter"
 	@echo "  deps         - Install dependencies"
+	@echo "  docker-run   - Run Docker container"
+	@echo "  docker-build - Build Docker image"
 	@echo "  help         - Show this help message"

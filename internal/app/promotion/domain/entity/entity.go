@@ -113,14 +113,15 @@ func (p *Buy3Pay2Promotion) Apply(items []CartItem) float64 {
 		return 0
 	}
 
+	// Calculate how many sets we have (e.g., how many times we can apply "Buy X Pay Y")
+	// For "Buy 3 Pay 2", each set of 3 items should get a discount of 1 item
 	totalItems := targetItem.Quantity
-	divisor := p.PaidQuantityDivisor + p.FreeQuantityDivisor
-	sets := totalItems / divisor
+	totalSets := totalItems / p.MinQuantity
 
-	// Calculate how many items are free
-	freeItems := sets * p.FreeQuantityDivisor
+	// Calculate discount as one free item per complete set
+	// For "Buy 3 Pay 2", that's one free item for every 3 items
+	discount := float64(totalSets) * targetItem.UnitPrice
 
-	discount := float64(freeItems) * targetItem.UnitPrice
 	return discount
 }
 
@@ -188,18 +189,21 @@ func (p *Promotion) ParseRule() (PromotionRule, error) {
 		var rule BuyOneGetOneFreePromotion
 		err = json.Unmarshal(p.Rule, &rule)
 		if err == nil {
+			rule.Active = p.Active
 			ruleInstance = &rule
 		}
 	case Buy3Pay2:
 		var rule Buy3Pay2Promotion
 		err = json.Unmarshal(p.Rule, &rule)
 		if err == nil {
+			rule.Active = p.Active
 			ruleInstance = &rule
 		}
 	case BulkDiscount:
 		var rule BulkDiscountPromotion
 		err = json.Unmarshal(p.Rule, &rule)
 		if err == nil {
+			rule.Active = p.Active
 			ruleInstance = &rule
 		}
 	default:

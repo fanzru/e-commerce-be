@@ -1,0 +1,30 @@
+# Git
+.git
+.github
+.gitignore
+
+# Docker
+.dockerignore
+docker-compose*.yml
+
+# Build files
+bin/
+tmp/
+dist/
+
+# Logs
+*.log
+
+# Environment files
+.env*
+!sample-env
+
+# IDE files
+.vscode/
+.idea/
+
+# Miscellaneous
+README.md
+LICENSE
+*.md
+.DS_Store 
