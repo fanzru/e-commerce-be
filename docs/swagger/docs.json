@@ -450,6 +450,7 @@
           "Checkout"
         ],
         "summary": "List checkouts",
+        "operationId": "Mixin0",
         "parameters": [
           {
             "type": "integer",
@@ -558,7 +559,6 @@
           "Checkout"
         ],
         "summary": "Get checkout by ID",
-        "operationId": "Mixin0",
         "parameters": [
           {
             "type": "string",

@@ -3,42 +3,236 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Your Cart - FORTEPAY E-Commerce</title>
+    <title>Shopping Cart - FORTEPAY E-Commerce</title>
     <link
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
     />
-    <link rel="stylesheet" href="css/style.css" />
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome for icons -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
   </head>
-  <body>
-    <header>
-      <div class="container header-container">
-        <a href="index.html" class="logo">FORTEPAY</a>
+  <body class="bg-gray-50 font-sans flex flex-col min-h-screen">
+    <header class="bg-white shadow-sm">
+      <div
+        class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center"
+      >
+        <a href="index.html" class="font-bold text-xl text-gray-800"
+          >FORTEPAY</a
+        >
         <nav>
-          <div class="nav-links">
-            <!-- Navigation links will be inserted via JavaScript -->
+          <div class="flex space-x-6" id="nav-links">
+            <!-- Navigation will be dynamically updated by JavaScript -->
+            <a href="products.html" class="text-gray-600 hover:text-gray-900"
+              >Products</a
+            >
+            <a href="login.html" class="text-gray-600 hover:text-gray-900"
+              >Login</a
+            >
+            <a href="register.html" class="text-gray-600 hover:text-gray-900"
+              >Register</a
+            >
           </div>
         </nav>
       </div>
     </header>
 
-    <main class="main-content">
-      <div class="container">
-        <h1 class="page-title">Your Shopping Cart</h1>
+    <main class="flex-grow py-8">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <h1 class="text-2xl font-semibold text-center text-gray-800 mb-8">
+          Shopping Cart
+        </h1>
 
-        <div class="cart-container">
-          <!-- Cart items will be loaded here via JavaScript -->
-          <div class="loading-spinner">Loading your cart...</div>
+        <div class="flex flex-col md:flex-row md:space-x-8">
+          <!-- Left Column: Cart Items -->
+          <div class="flex-grow mb-6 md:mb-0">
+            <div class="bg-white shadow-sm rounded-md overflow-hidden">
+              <div class="bg-gray-50 px-4 py-3 border-b border-gray-200">
+                <h2 class="text-lg font-medium text-gray-800">Your Items</h2>
+              </div>
+              <div id="cart-items" class="divide-y divide-gray-200">
+                <!-- Cart items will be loaded here via JavaScript -->
+                <div class="p-6 text-center text-gray-500">
+                  <i class="fas fa-spinner fa-spin mr-2"></i> Loading your
+                  cart...
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Column: Cart Summary -->
+          <div class="w-full md:w-80 lg:w-96">
+            <div class="bg-white shadow-sm rounded-md p-6 sticky top-4">
+              <h3
+                class="text-lg font-medium text-gray-800 pb-4 border-b border-gray-200 mb-4"
+              >
+                Order Summary
+              </h3>
+
+              <div class="flex justify-between mb-3">
+                <span class="text-gray-600">Subtotal</span>
+                <span class="font-medium" id="cart-subtotal">USD 0</span>
+              </div>
+
+              <div
+                id="discount-section"
+                class="bg-green-50 p-4 rounded-md my-4 hidden"
+              >
+                <div class="text-green-700 font-medium mb-2">
+                  <i class="fas fa-tag mr-1"></i> Available Discounts
+                </div>
+                <div id="discount-items" class="mb-2 space-y-2">
+                  <!-- Discount items will be added here via JavaScript -->
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600">Total Discount</span>
+                  <span class="font-medium text-green-700" id="cart-discount"
+                    >-USD 0</span
+                  >
+                </div>
+              </div>
+
+              <div
+                class="flex justify-between border-t border-gray-200 pt-4 mt-4 text-lg font-medium"
+              >
+                <span>Total</span>
+                <span id="cart-final-total">USD 0</span>
+              </div>
+
+              <button
+                id="checkout-button"
+                class="w-full mt-6 bg-green-600 hover:bg-green-700 text-white py-3 rounded-md font-medium transition-colors flex items-center justify-center"
+              >
+                <i class="fas fa-credit-card mr-2"></i>
+                Proceed to Checkout
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="text-center mt-8">
+          <a
+            href="products.html"
+            class="inline-flex items-center text-blue-600 hover:text-blue-800"
+          >
+            <i class="fas fa-arrow-left mr-2"></i>
+            Continue Shopping
+          </a>
+          <button
+            id="debug-cart-btn"
+            class="ml-4 bg-gray-600 hover:bg-gray-700 text-white text-sm px-4 py-2 rounded-md"
+          >
+            Debug Cart Issues
+          </button>
         </div>
       </div>
     </main>
 
-    <footer>
-      <div class="container">
-        <p>&copy; 2023 FORTEPAY E-Commerce. All rights reserved.</p>
+    <footer class="bg-white border-t border-gray-200 mt-auto">
+      <div
+        class="max-w-7xl mx-auto px-4 py-6 text-center text-gray-500 text-sm"
+      >
+        <p>
+          &copy; 2025 FORTEPAY E-Commerce. Created by fanzru. All rights
+          reserved.
+        </p>
       </div>
     </footer>
 
+    <!-- Load JavaScript files -->
+    <script src="js/common.js"></script>
+    <script src="js/cart.js"></script>
     <script src="js/main.js"></script>
+    <script>
+      // Add cart item template
+      document.addEventListener("DOMContentLoaded", function () {
+        // Cart page requires authentication
+        if (!auth.isLoggedIn()) {
+          window.location.href = "login.html";
+          return;
+        }
+
+        window.cartItemTemplate = function (item) {
+          var itemPrice = formatPrice(item.product.price);
+          var itemSubtotal = formatPrice(item.product.price * item.quantity);
+          var itemImage = item.product.image || "img/product-placeholder.svg";
+
+          return (
+            '<div class="cart-item p-4" data-item-id="' +
+            item.id +
+            '">' +
+            '<div class="flex flex-col sm:flex-row">' +
+            '<div class="flex-shrink-0 w-full sm:w-24 h-24 bg-gray-100 rounded-md overflow-hidden mb-4 sm:mb-0">' +
+            '<img src="' +
+            itemImage +
+            '" alt="' +
+            item.product.name +
+            '" class="w-full h-full object-contain p-2">' +
+            "</div>" +
+            '<div class="flex-grow sm:ml-4">' +
+            '<div class="flex flex-col sm:flex-row justify-between">' +
+            "<div>" +
+            '<h3 class="text-base font-medium text-gray-800">' +
+            item.product.name +
+            "</h3>" +
+            '<p class="text-sm text-gray-500">ID: ' +
+            item.product.id +
+            "</p>" +
+            '<p class="text-base font-medium text-green-600 mt-1">' +
+            itemPrice +
+            "</p>" +
+            "</div>" +
+            '<div class="flex items-center mt-4 sm:mt-0">' +
+            '<div class="flex border border-gray-300 rounded-md">' +
+            '<button class="decrease-quantity-btn px-3 py-1 text-gray-600 hover:bg-gray-100" data-item-id="' +
+            item.id +
+            '">' +
+            '<i class="fas fa-minus"></i>' +
+            "</button>" +
+            '<input type="number" min="1" value="' +
+            item.quantity +
+            '" class="quantity-input w-12 text-center border-x border-gray-300" data-item-id="' +
+            item.id +
+            '">' +
+            '<button class="increase-quantity-btn px-3 py-1 text-gray-600 hover:bg-gray-100" data-item-id="' +
+            item.id +
+            '">' +
+            '<i class="fas fa-plus"></i>' +
+            "</button>" +
+            "</div>" +
+            '<button class="remove-item-btn ml-3 text-red-500 hover:text-red-700" data-item-id="' +
+            item.id +
+            '">' +
+            '<i class="fas fa-trash-alt"></i>' +
+            "</button>" +
+            "</div>" +
+            "</div>" +
+            '<div class="mt-3">' +
+            '<p class="text-gray-600 text-sm">Subtotal: <span class="font-medium">' +
+            itemSubtotal +
+            "</span></p>" +
+            "</div>" +
+            "</div>" +
+            "</div>" +
+            "</div>"
+          );
+        };
+
+        // Add debug button functionality
+        const debugBtn = document.getElementById("debug-cart-btn");
+        if (debugBtn) {
+          debugBtn.addEventListener("click", function () {
+            console.log("Running cart diagnostics...");
+            if (window.debugCartIssues) {
+              window.debugCartIssues();
+            }
+          });
+        }
+      });
+    </script>
   </body>
 </html>

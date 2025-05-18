@@ -1,0 +1,99 @@
+version: "3.6"
+
+services:
+  # Application service
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - DB_HOST=postgres
+        - DB_PORT=5432
+        - DB_USER=fanzru
+        - DB_PASSWORD=
+        - DB_NAME=ecommerce
+        - SERVER_PORT=8080
+        - APP_ENV=development
+        - SWAGGER_HOST=localhost
+    ports:
+      - "${SERVER_PORT:-8080}:8080"
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=fanzru
+      - DB_PASSWORD=
+      - DB_NAME=ecommerce
+      - DB_MAX_OPEN_CONNS=25
+      - DB_MAX_IDLE_CONNS=5
+      - DB_CONN_MAX_LIFETIME_MINUTES=30
+      - SERVER_PORT=8080
+      - APP_ENV=development
+      - LOG_LEVEL=info
+      - LOG_FORMAT=json
+      - JWT_SECRET_KEY=asnfsnfasngjnahgbwub2h03hbajfbajsfb1239anf9KDNASBN*HFasndfakfnasn8na8babs1-hbxasdnas09@kdmaskdas
+      - JWT_EXPIRATION_HOURS=24
+      - OTEL_ENABLED=false
+      - OTEL_SERVICE_NAME=e-commerce-api
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
+      - SWAGGER_HOST=localhost
+    depends_on:
+      - postgres
+    networks:
+      - ecommerce-network
+    restart: unless-stopped
+    volumes:
+      # Mount the web directory for easier frontend development
+      - ./web:/app/web
+      - ./assets:/app/assets
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # PostgreSQL database service
+  postgres:
+    image: postgres:15-alpine
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    environment:
+      - POSTGRES_USER=fanzru
+      - POSTGRES_PASSWORD=ganteng
+      - POSTGRES_DB=ecommerce
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - ecommerce-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fanzru -d ecommerce"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # Run migrations automatically on startup
+  # migrations:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   command:
+  #     [
+  #       "sh",
+  #       "-c",
+  #       "sleep 5 && migrate -database 'postgres://fanzru:ganteng@postgres:5432/ecommerce?sslmode=disable' -path migrations/postgresqldb up",
+  #     ]
+  #   depends_on:
+  #     - postgres
+  #   networks:
+  #     - ecommerce-network
+  #   restart: on-failure
+
+volumes:
+  postgres-data:
+    driver: local
+
+networks:
+  ecommerce-network:
+    driver: bridge

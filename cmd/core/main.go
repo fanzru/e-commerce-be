@@ -281,7 +281,7 @@ func createAPIHandler(useCases *useCases, middlewareFactory *middleware.Factory)
 	productRBAC := middleware.NewRBACMiddleware(middlewareFactory).
 		// List and Get operations are public
 		WithOperation("ListProducts", middleware.AuthTypePublic, middleware.AuthTypeRoleCustomer, middleware.AuthTypeRoleAdmin).
-		WithOperation("GetProduct", middleware.AuthTypePublic, middleware.AuthTypeRoleCustomer, middleware.AuthTypeRoleAdmin).
+		WithOperation("GetProduct", middleware.AuthTypePublic).
 		// Write operations require admin role
 		WithOperation("CreateProduct", middleware.AuthTypeRoleAdmin).
 		WithOperation("UpdateProduct", middleware.AuthTypeRoleAdmin).

@@ -7,7 +7,8 @@ import (
 
 	"github.com/fanzru/e-commerce-be/internal/app/product/port/genhttp"
 	"github.com/fanzru/e-commerce-be/internal/app/product/usecase"
-	"github.com/fanzru/e-commerce-be/pkg/errors"
+	"github.com/fanzru/e-commerce-be/internal/common/errs"
+	"github.com/fanzru/e-commerce-be/internal/infrastructure/middleware"
 	"github.com/google/uuid"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
@@ -30,7 +31,7 @@ func NewHTTPServer(productUseCase usecase.ProductUseCase) http.Handler {
 	return genhttp.HandlerWithOptions(handler, genhttp.StdHTTPServerOptions{
 		BaseRouter: http.NewServeMux(),
 		ErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
-			handleError(w, err)
+			middleware.RespondWithError(w, err)
 		},
 	})
 }
@@ -122,7 +123,7 @@ func (h *ProductHandler) GetProduct(w http.ResponseWriter, r *http.Request, id o
 
 	productID, err := uuid.Parse(id.String())
 	if err != nil {
-		handleError(w, errors.NewBadRequest("invalid product ID"))
+		handleError(w, errs.NewBadRequest("Invalid product ID"))
 		return
 	}
 
@@ -164,7 +165,7 @@ func (h *ProductHandler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 
 	var params genhttp.CreateProductJSONRequestBody
 	if err := json.NewDecoder(r.Body).Decode(&params); err != nil {
-		handleError(w, errors.NewBadRequest("invalid request body"))
+		handleError(w, errs.NewBadRequest("Invalid request body"))
 		return
 	}
 
@@ -206,13 +207,13 @@ func (h *ProductHandler) UpdateProduct(w http.ResponseWriter, r *http.Request, i
 
 	productID, err := uuid.Parse(id.String())
 	if err != nil {
-		handleError(w, errors.NewBadRequest("invalid product ID"))
+		handleError(w, errs.NewBadRequest("Invalid product ID"))
 		return
 	}
 
 	var params genhttp.UpdateProductJSONRequestBody
 	if err := json.NewDecoder(r.Body).Decode(&params); err != nil {
-		handleError(w, errors.NewBadRequest("invalid request body"))
+		handleError(w, errs.NewBadRequest("Invalid request body"))
 		return
 	}
 
@@ -241,7 +242,7 @@ func (h *ProductHandler) UpdateProduct(w http.ResponseWriter, r *http.Request, i
 
 	// Map to response
 	productId := openapi_types.UUID(product.ID)
-	productPrice := float32(product.Price)
+	responsePrice := float32(product.Price)
 
 	response := genhttp.ProductResponse{
 		Code: "success",
@@ -255,7 +256,7 @@ func (h *ProductHandler) UpdateProduct(w http.ResponseWriter, r *http.Request, i
 			Id:        &productId,
 			Sku:       &product.SKU,
 			Name:      &product.Name,
-			Price:     &productPrice,
+			Price:     &responsePrice,
 			Inventory: &product.Inventory,
 		},
 		Message:    "Product updated successfully",
@@ -271,7 +272,7 @@ func (h *ProductHandler) DeleteProduct(w http.ResponseWriter, r *http.Request, i
 
 	productID, err := uuid.Parse(id.String())
 	if err != nil {
-		handleError(w, errors.NewBadRequest("invalid product ID"))
+		handleError(w, errs.NewBadRequest("Invalid product ID"))
 		return
 	}
 
@@ -296,43 +297,10 @@ func (h *ProductHandler) DeleteProduct(w http.ResponseWriter, r *http.Request, i
 
 // respondJSON sends a JSON response
 func respondJSON(w http.ResponseWriter, status int, data interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-
-	if data != nil {
-		err := json.NewEncoder(w).Encode(data)
-		if err != nil {
-			http.Error(w, "Error encoding response", http.StatusInternalServerError)
-		}
-	}
+	middleware.RespondWithJSON(w, status, data)
 }
 
 // handleError handles errors and sends appropriate HTTP responses
 func handleError(w http.ResponseWriter, err error) {
-	var status int
-	var code string
-	var message string
-
-	switch {
-	case errors.IsNotFound(err):
-		status = http.StatusNotFound
-		code = "not_found"
-		message = err.Error()
-	case errors.IsBadRequest(err):
-		status = http.StatusBadRequest
-		code = "bad_request"
-		message = err.Error()
-	default:
-		status = http.StatusInternalServerError
-		code = "internal_error"
-		message = "internal server error"
-	}
-
-	errorResponse := genhttp.ErrorResponse{
-		Code:       code,
-		Message:    message,
-		ServerTime: time.Now(),
-	}
-
-	respondJSON(w, status, errorResponse)
+	middleware.RespondWithError(w, err)
 }

@@ -231,6 +231,17 @@ func (rm *RBACMiddleware) getOperationFromRequest(r *http.Request) string {
 		if operationID, pathExists := methodMap[normalizedPath]; pathExists {
 			return operationID
 		}
+
+		// If exact match fails, try pattern matching for paths with parameters
+		for patternPath, opID := range methodMap {
+			if matchPathPattern(patternPath, normalizedPath) {
+				Logger.Debug("RBAC: Matched path pattern",
+					slog.String("pattern", patternPath),
+					slog.String("actual_path", normalizedPath),
+					slog.String("operation", opID))
+				return opID
+			}
+		}
 	}
 
 	// Log that we couldn't identify the operation
@@ -241,6 +252,38 @@ func (rm *RBACMiddleware) getOperationFromRequest(r *http.Request) string {
 
 	// If no specific operation is identified, return a default
 	return "Unknown" + method + normalizedPath
+}
+
+// matchPathPattern checks if an actual path matches a path pattern with parameters
+// Pattern example: /api/v1/products/{id}
+// Actual path: /api/v1/products/123
+func matchPathPattern(pattern, actualPath string) bool {
+	// Split both paths into segments
+	patternSegments := strings.Split(strings.Trim(pattern, "/"), "/")
+	actualSegments := strings.Split(strings.Trim(actualPath, "/"), "/")
+
+	// If they have different number of segments, they don't match
+	if len(patternSegments) != len(actualSegments) {
+		return false
+	}
+
+	// Check each segment
+	for i, patternSeg := range patternSegments {
+		actualSeg := actualSegments[i]
+
+		// If pattern segment is a parameter (enclosed in {}), it matches any value
+		if strings.HasPrefix(patternSeg, "{") && strings.HasSuffix(patternSeg, "}") {
+			continue // Parameter segment matches anything
+		}
+
+		// Otherwise, segments must match exactly
+		if patternSeg != actualSeg {
+			return false
+		}
+	}
+
+	// All segments matched
+	return true
 }
 
 // RegisterServerInterface analyzes a server interface and automatically registers its methods
