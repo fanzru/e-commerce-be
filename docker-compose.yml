@@ -10,7 +10,7 @@ services:
         - DB_HOST=postgres
         - DB_PORT=5432
         - DB_USER=fanzru
-        - DB_PASSWORD=ganteng
+        - DB_PASSWORD=
         - DB_NAME=ecommerce
         - SERVER_PORT=8080
         - APP_ENV=development
@@ -21,7 +21,7 @@ services:
       - DB_HOST=postgres
       - DB_PORT=5432
       - DB_USER=fanzru
-      - DB_PASSWORD=ganteng
+      - DB_PASSWORD=
       - DB_NAME=ecommerce
       - DB_MAX_OPEN_CONNS=25
       - DB_MAX_IDLE_CONNS=5
