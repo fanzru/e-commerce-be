@@ -39,6 +39,7 @@ func (f *Factory) DefaultMiddleware() []func(http.Handler) http.Handler {
 		TraceMiddleware,
 		APILogger,
 		Recoverer,
+		ErrorHandlerMiddleware,
 	}
 }
 

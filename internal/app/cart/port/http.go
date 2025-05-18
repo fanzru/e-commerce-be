@@ -10,10 +10,12 @@ import (
 	"github.com/fanzru/e-commerce-be/internal/app/cart/port/genhttp"
 	"github.com/fanzru/e-commerce-be/internal/app/cart/usecase"
 	promotionUseCase "github.com/fanzru/e-commerce-be/internal/app/promotion/usecase"
-	"github.com/fanzru/e-commerce-be/internal/app/user/domain/params"
+	userParams "github.com/fanzru/e-commerce-be/internal/app/user/domain/params"
+	"github.com/fanzru/e-commerce-be/internal/common/errs"
 	"github.com/fanzru/e-commerce-be/internal/infrastructure/middleware"
 	"github.com/fanzru/e-commerce-be/pkg/errors"
 	"github.com/google/uuid"
+
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
@@ -60,21 +62,21 @@ func NewHTTPServer(cartUseCase usecase.CartUseCase, promotionUseCase promotionUs
 	})
 }
 
-// GetCurrentUserCart handles GET /api/v1/carts/me requests
+// GetCurrentUserCart handles GET /carts/me requests
 func (h *CartHandler) GetCurrentUserCart(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	// Get user ID from JWT token in context
-	userClaims, ok := ctx.Value(middleware.ContextTokenClaimsKey).(*params.TokenClaims)
+	// Get user ID from context
+	userClaims, ok := ctx.Value(middleware.ContextTokenClaimsKey).(*userParams.TokenClaims)
 	if !ok || userClaims == nil {
-		handleError(w, errors.NewUnauthorized("authentication required"))
+		handleError(w, errs.NewUnauthorized("authentication required"))
 		return
 	}
 
 	// Parse user ID from claims
 	userID, err := uuid.Parse(userClaims.UserID)
 	if err != nil {
-		handleError(w, errors.NewBadRequest("invalid user ID"))
+		handleError(w, errs.NewBadRequest("invalid user ID"))
 		return
 	}
 
@@ -129,21 +131,21 @@ func (h *CartHandler) GetCurrentUserCart(w http.ResponseWriter, r *http.Request)
 	respondJSON(w, http.StatusOK, response)
 }
 
-// AddItemToCurrentUserCart handles POST /api/v1/carts/me requests
+// AddItemToCurrentUserCart handles POST /carts/me requests
 func (h *CartHandler) AddItemToCurrentUserCart(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	// Get user ID from JWT token in context
-	userClaims, ok := ctx.Value(middleware.ContextTokenClaimsKey).(*params.TokenClaims)
+	// Get user ID from context
+	userClaims, ok := ctx.Value(middleware.ContextTokenClaimsKey).(*userParams.TokenClaims)
 	if !ok || userClaims == nil {
-		handleError(w, errors.NewUnauthorized("authentication required"))
+		handleError(w, errs.NewUnauthorized("authentication required"))
 		return
 	}
 
 	// Parse user ID from claims
 	userID, err := uuid.Parse(userClaims.UserID)
 	if err != nil {
-		handleError(w, errors.NewBadRequest("invalid user ID"))
+		handleError(w, errs.NewBadRequest("invalid user ID"))
 		return
 	}
 
@@ -203,16 +205,16 @@ func (h *CartHandler) UpdateCartItem(w http.ResponseWriter, r *http.Request, ite
 	ctx := r.Context()
 
 	// Authenticate user
-	userClaims, ok := ctx.Value(middleware.ContextTokenClaimsKey).(*params.TokenClaims)
+	userClaims, ok := ctx.Value(middleware.ContextTokenClaimsKey).(*userParams.TokenClaims)
 	if !ok || userClaims == nil {
-		handleError(w, errors.NewUnauthorized("authentication required"))
+		handleError(w, errs.NewUnauthorized("authentication required"))
 		return
 	}
 
 	// Parse user ID from claims
 	userID, err := uuid.Parse(userClaims.UserID)
 	if err != nil {
-		handleError(w, errors.NewBadRequest("invalid user ID"))
+		handleError(w, errs.NewBadRequest("invalid user ID"))
 		return
 	}
 
@@ -245,16 +247,16 @@ func (h *CartHandler) RemoveCartItem(w http.ResponseWriter, r *http.Request, ite
 	ctx := r.Context()
 
 	// Authenticate user
-	userClaims, ok := ctx.Value(middleware.ContextTokenClaimsKey).(*params.TokenClaims)
+	userClaims, ok := ctx.Value(middleware.ContextTokenClaimsKey).(*userParams.TokenClaims)
 	if !ok || userClaims == nil {
-		handleError(w, errors.NewUnauthorized("authentication required"))
+		handleError(w, errs.NewUnauthorized("authentication required"))
 		return
 	}
 
 	// Parse user ID from claims
 	userID, err := uuid.Parse(userClaims.UserID)
 	if err != nil {
-		handleError(w, errors.NewBadRequest("invalid user ID"))
+		handleError(w, errs.NewBadRequest("invalid user ID"))
 		return
 	}
 
@@ -278,16 +280,16 @@ func (h *CartHandler) ClearUserCart(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	// Authenticate user
-	userClaims, ok := ctx.Value(middleware.ContextTokenClaimsKey).(*params.TokenClaims)
+	userClaims, ok := ctx.Value(middleware.ContextTokenClaimsKey).(*userParams.TokenClaims)
 	if !ok || userClaims == nil {
-		handleError(w, errors.NewUnauthorized("authentication required"))
+		handleError(w, errs.NewUnauthorized("authentication required"))
 		return
 	}
 
 	// Parse user ID from claims
 	userID, err := uuid.Parse(userClaims.UserID)
 	if err != nil {
-		handleError(w, errors.NewBadRequest("invalid user ID"))
+		handleError(w, errs.NewBadRequest("invalid user ID"))
 		return
 	}
 
@@ -421,43 +423,10 @@ func convertCartItemInfoToGenHTTP(item *entity.CartItemInfo) genhttp.CartItem {
 
 // respondJSON sends a JSON response
 func respondJSON(w http.ResponseWriter, status int, data interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	if data != nil {
-		if err := json.NewEncoder(w).Encode(data); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
-	}
+	middleware.RespondWithJSON(w, status, data)
 }
 
 // handleError handles an error and sends an appropriate response
 func handleError(w http.ResponseWriter, err error) {
-	status := http.StatusInternalServerError
-	code := "internal_server_error"
-	message := "An unexpected error occurred"
-
-	// Check for domain errors
-	if appErr, ok := err.(*errors.AppError); ok {
-		status = appErr.Status
-		message = appErr.Message
-
-		// Set error code based on HTTP status
-		switch status {
-		case http.StatusNotFound:
-			code = "not_found"
-		case http.StatusBadRequest:
-			code = "bad_request"
-		case http.StatusConflict:
-			code = "conflict"
-		}
-	}
-
-	// Send error response
-	errorResponse := genhttp.ErrorResponse{
-		Code:       code,
-		Message:    message,
-		ServerTime: time.Now(),
-	}
-
-	respondJSON(w, status, errorResponse)
+	middleware.RespondWithError(w, err)
 }

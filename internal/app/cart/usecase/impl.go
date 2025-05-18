@@ -11,6 +11,7 @@ import (
 	cartRepo "github.com/fanzru/e-commerce-be/internal/app/cart/repo"
 	productRepo "github.com/fanzru/e-commerce-be/internal/app/product/repo"
 	promotionUseCase "github.com/fanzru/e-commerce-be/internal/app/promotion/usecase"
+	"github.com/fanzru/e-commerce-be/internal/common/errs"
 	"github.com/fanzru/e-commerce-be/internal/infrastructure/middleware"
 	"github.com/google/uuid"
 )
@@ -100,7 +101,23 @@ func (u *cartUseCase) AddItemToUserCart(ctx context.Context, userID, productID u
 		return nil, fmt.Errorf("failed to check for existing item: %w", err)
 	}
 
+	product, err := u.productRepo.GetByID(ctx, productID)
+	if err != nil {
+		logger.Error("Failed to get product", "error", err.Error())
+		return nil, fmt.Errorf("failed to get product: %w", err)
+	}
+
 	if existingItem != nil {
+
+		// Check if there's enough inventory
+		if !product.HasEnoughInventory(existingItem.Quantity + quantity) {
+			logger.Warn("Not enough inventory",
+				"product_id", productID.String(),
+				"requested", quantity,
+				"available", product.Inventory)
+			return nil, errs.New(nil, errs.CodeOutOfStock, 400, "Insufficient stock")
+		}
+
 		// Update existing item quantity
 		logger.Debug("Product already in cart, updating quantity", "existing_quantity", existingItem.Quantity)
 		err = u.cartRepo.UpdateItem(ctx, existingItem.ID, existingItem.Quantity+quantity)
@@ -118,21 +135,13 @@ func (u *cartUseCase) AddItemToUserCart(ctx context.Context, userID, productID u
 		return updatedItem, nil
 	}
 
-	// Get the product
-	logger.Debug("Fetching product")
-	product, err := u.productRepo.GetByID(ctx, productID)
-	if err != nil {
-		logger.Error("Failed to get product", "error", err.Error())
-		return nil, fmt.Errorf("failed to get product: %w", err)
-	}
-
 	// Check if there's enough inventory
 	if !product.HasEnoughInventory(quantity) {
 		logger.Warn("Not enough inventory",
 			"product_id", productID.String(),
 			"requested", quantity,
 			"available", product.Inventory)
-		return nil, errors.New("not enough inventory")
+		return nil, errs.New(nil, errs.CodeOutOfStock, 400, "Insufficient stock")
 	}
 
 	// Create a new cart item
@@ -214,7 +223,7 @@ func (u *cartUseCase) UpdateItemQuantity(ctx context.Context, userID, itemID uui
 			"product_id", product.ID.String(),
 			"requested", quantity,
 			"available", product.Inventory)
-		return errors.New("not enough inventory")
+		return errs.New(nil, errs.CodeOutOfStock, 400, "Insufficient stock")
 	}
 
 	// Update the item quantity

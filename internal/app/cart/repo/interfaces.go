@@ -15,6 +15,8 @@ var (
 )
 
 // CartRepository defines the interface for cart repository
+
+//go:generate oapi-codegen -config api/http/cart.yaml -generate types,client,server,spec ./api/http/cart.yaml
 type CartRepository interface {
 	// GetByUserID retrieves all cart items for a user
 	GetByUserID(ctx context.Context, userID uuid.UUID) (*entity.Cart, error)
