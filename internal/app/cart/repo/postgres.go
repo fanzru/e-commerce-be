@@ -25,53 +25,30 @@ func NewCartRepository(db *sql.DB) CartRepository {
 	}
 }
 
-// GetByID retrieves a cart by its ID with all items
-func (r *CartPostgresRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.Cart, error) {
+// GetByUserID retrieves all cart items for a user
+func (r *CartPostgresRepository) GetByUserID(ctx context.Context, userID uuid.UUID) (*entity.Cart, error) {
 	logger := middleware.Logger.With(
-		"method", "CartRepository.GetByID",
-		"cart_id", id.String(),
+		"method", "CartRepository.GetByUserID",
+		"user_id", userID.String(),
 	)
-	logger.Debug("Fetching cart by ID")
+	logger.Debug("Fetching cart items for user")
 	startTime := time.Now()
 
-	// First, get the cart
-	cartQuery := `
-		SELECT id, user_id, created_at, updated_at
-		FROM carts
-		WHERE id = $1 AND deleted_at IS NULL
-	`
+	// Create a new cart with the user ID
+	cart := entity.NewCartWithUser(userID)
 
-	var cart entity.Cart
-	err := r.db.QueryRowContext(ctx, cartQuery, id).Scan(
-		&cart.ID,
-		&cart.UserID,
-		&cart.CreatedAt,
-		&cart.UpdatedAt,
-	)
-
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			logger.Warn("Cart not found", "error", "ErrCartNotFound")
-			return nil, domainErrors.ErrCartNotFound
-		}
-		logger.Error("Failed to query cart by ID", "error", err.Error())
-		return nil, fmt.Errorf("error querying cart by ID: %w", err)
-	}
-
-	logger.Debug("Cart found, fetching cart items", "user_id", cart.UserID)
-
-	// Then, get all cart items with product details
+	// Get all cart items with product details
 	itemsQuery := `
 		SELECT 
-			ci.id, ci.cart_id, ci.product_id, ci.quantity, ci.created_at, ci.updated_at,
+			ci.id, ci.user_id, ci.product_id, ci.quantity, ci.created_at, ci.updated_at,
 			p.sku, p.name, p.price
 		FROM cart_items ci
 		JOIN products p ON ci.product_id = p.id
-		WHERE ci.cart_id = $1 AND ci.deleted_at IS NULL
+		WHERE ci.user_id = $1 AND ci.deleted_at IS NULL
 		ORDER BY ci.created_at
 	`
 
-	rows, err := r.db.QueryContext(ctx, itemsQuery, id)
+	rows, err := r.db.QueryContext(ctx, itemsQuery, userID)
 	if err != nil {
 		logger.Error("Failed to query cart items", "error", err.Error())
 		return nil, fmt.Errorf("error querying cart items: %w", err)
@@ -80,23 +57,29 @@ func (r *CartPostgresRepository) GetByID(ctx context.Context, id uuid.UUID) (*en
 
 	cart.Items = []*entity.CartItem{}
 	itemCount := 0
+
 	for rows.Next() {
 		var item entity.CartItem
+		var productSKU string
+		var productName string
+		var unitPrice float64
+
 		err := rows.Scan(
 			&item.ID,
-			&item.CartID,
+			&item.UserID,
 			&item.ProductID,
 			&item.Quantity,
 			&item.CreatedAt,
 			&item.UpdatedAt,
-			&item.ProductSKU,
-			&item.ProductName,
-			&item.UnitPrice,
+			&productSKU,
+			&productName,
+			&unitPrice,
 		)
 		if err != nil {
 			logger.Error("Failed to scan cart item", "error", err.Error())
 			return nil, fmt.Errorf("error scanning cart item row: %w", err)
 		}
+
 		cart.Items = append(cart.Items, &item)
 		itemCount++
 	}
@@ -107,198 +90,64 @@ func (r *CartPostgresRepository) GetByID(ctx context.Context, id uuid.UUID) (*en
 	}
 
 	duration := time.Since(startTime)
-	logger.Info("Successfully retrieved cart with items",
-		"user_id", cart.UserID,
+	logger.Info("Successfully retrieved cart items for user",
 		"item_count", itemCount,
 		"duration_ms", duration.Milliseconds())
 
-	return &cart, nil
+	return cart, nil
 }
 
-// Create creates a new empty cart
-func (r *CartPostgresRepository) Create(ctx context.Context, cart *entity.Cart) error {
-	// Generate a new UUID if not provided
-	if cart.ID == uuid.Nil {
-		cart.ID = uuid.New()
-	}
-
-	query := `
-		INSERT INTO carts (id, user_id)
-		VALUES ($1, $2)
-		RETURNING created_at, updated_at
-	`
-
-	err := r.db.QueryRowContext(ctx, query, cart.ID, cart.UserID).Scan(
-		&cart.CreatedAt,
-		&cart.UpdatedAt,
-	)
-
-	if err != nil {
-		return fmt.Errorf("error creating cart: %w", err)
-	}
-
-	return nil
-}
-
-// Delete deletes a cart by its ID (soft delete)
-func (r *CartPostgresRepository) Delete(ctx context.Context, id uuid.UUID) error {
-	tx, err := r.db.BeginTx(ctx, nil)
-	if err != nil {
-		return fmt.Errorf("error beginning transaction: %w", err)
-	}
-	defer tx.Rollback()
-
-	// First, soft delete all cart items
-	itemsQuery := `
-		UPDATE cart_items
-		SET deleted_at = NOW()
-		WHERE cart_id = $1 AND deleted_at IS NULL
-	`
-
-	_, err = tx.ExecContext(ctx, itemsQuery, id)
-	if err != nil {
-		return fmt.Errorf("error deleting cart items: %w", err)
-	}
-
-	// Then, soft delete the cart
-	cartQuery := `
-		UPDATE carts
-		SET deleted_at = NOW()
-		WHERE id = $1 AND deleted_at IS NULL
-		RETURNING id
-	`
-
-	var cartID uuid.UUID
-	err = tx.QueryRowContext(ctx, cartQuery, id).Scan(&cartID)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return domainErrors.ErrCartNotFound
-		}
-		return fmt.Errorf("error deleting cart: %w", err)
-	}
-
-	if err = tx.Commit(); err != nil {
-		return fmt.Errorf("error committing transaction: %w", err)
-	}
-
-	return nil
-}
-
-// AddItem adds an item to a cart or updates its quantity if already exists
+// AddItem adds an item to a user's cart or updates its quantity if already exists
 func (r *CartPostgresRepository) AddItem(ctx context.Context, item *entity.CartItem) error {
 	logger := middleware.Logger.With(
 		"method", "CartRepository.AddItem",
-		"cart_id", item.CartID.String(),
+		"user_id", item.UserID.String(),
 		"product_id", item.ProductID.String(),
-		"quantity", item.Quantity,
 	)
-	logger.InfoContext(ctx, "Adding item to cart")
+	logger.Debug("Adding item to user's cart")
 	startTime := time.Now()
 
-	tx, err := r.db.BeginTx(ctx, nil)
-	if err != nil {
-		return fmt.Errorf("error beginning transaction: %w", err)
-	}
-	defer tx.Rollback()
-
-	// Check if cart exists
-	var cartExists bool
-	err = tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM carts WHERE id = $1 AND deleted_at IS NULL)", item.CartID).Scan(&cartExists)
-	if err != nil {
-		return fmt.Errorf("error checking cart existence: %w", err)
+	// Check if this product already exists in the user's cart
+	existingItem, err := r.GetItemByProductID(ctx, item.UserID, item.ProductID)
+	if err != nil && !errors.Is(err, domainErrors.ErrItemNotFound) {
+		logger.Error("Failed to check for existing item", "error", err.Error())
+		return fmt.Errorf("error checking for existing item: %w", err)
 	}
 
-	if !cartExists {
-		return domainErrors.ErrCartNotFound
+	if existingItem != nil {
+		// Update quantity if item exists
+		logger.Debug("Item already exists, updating quantity",
+			"item_id", existingItem.ID.String(),
+			"old_quantity", existingItem.Quantity,
+			"new_quantity", existingItem.Quantity+item.Quantity)
+
+		return r.UpdateItem(ctx, existingItem.ID, existingItem.Quantity+item.Quantity)
 	}
 
-	// First, get product details - we need this for both new items and updates
-	productQuery := `
-		SELECT sku, name, price
-		FROM products
-		WHERE id = $1 AND deleted_at IS NULL
+	// Otherwise, insert a new item
+	query := `
+		INSERT INTO cart_items (
+			id, user_id, product_id, quantity
+		) VALUES (
+			$1, $2, $3, $4
+		)
 	`
-	err = tx.QueryRowContext(ctx, productQuery, item.ProductID).Scan(
-		&item.ProductSKU,
-		&item.ProductName,
-		&item.UnitPrice,
+
+	_, err = r.db.ExecContext(ctx, query,
+		item.ID,
+		item.UserID,
+		item.ProductID,
+		item.Quantity,
 	)
+
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return domainErrors.ErrProductNotFound
-		}
-		return fmt.Errorf("error getting product details: %w", err)
-	}
-
-	// Check if the item already exists
-	var existingItemID uuid.UUID
-	var existingQuantity int
-	err = tx.QueryRowContext(ctx,
-		"SELECT id, quantity FROM cart_items WHERE cart_id = $1 AND product_id = $2 AND deleted_at IS NULL",
-		item.CartID, item.ProductID).Scan(&existingItemID, &existingQuantity)
-
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return fmt.Errorf("error checking existing cart item: %w", err)
-	}
-
-	// If item exists, update its quantity
-	if err == nil {
-		updateQuery := `
-			UPDATE cart_items
-			SET quantity = $1, updated_at = NOW()
-			WHERE id = $2
-			RETURNING created_at, updated_at
-		`
-
-		newQuantity := existingQuantity + item.Quantity
-		err = tx.QueryRowContext(ctx, updateQuery, newQuantity, existingItemID).Scan(
-			&item.CreatedAt,
-			&item.UpdatedAt,
-		)
-		if err != nil {
-			return fmt.Errorf("error updating cart item quantity: %w", err)
-		}
-
-		item.ID = existingItemID
-		item.Quantity = newQuantity
-	} else {
-		// Otherwise, insert a new item
-		if item.ID == uuid.Nil {
-			item.ID = uuid.New()
-		}
-
-		insertQuery := `
-			INSERT INTO cart_items (id, cart_id, product_id, quantity, product_sku, product_name, unit_price)
-			VALUES ($1, $2, $3, $4, $5, $6, $7)
-			RETURNING created_at, updated_at
-		`
-
-		err = tx.QueryRowContext(ctx, insertQuery,
-			item.ID,
-			item.CartID,
-			item.ProductID,
-			item.Quantity,
-			item.ProductSKU,
-			item.ProductName,
-			item.UnitPrice).Scan(
-			&item.CreatedAt,
-			&item.UpdatedAt,
-		)
-		if err != nil {
-			return fmt.Errorf("error inserting cart item: %w", err)
-		}
-	}
-
-	if err = tx.Commit(); err != nil {
-		return fmt.Errorf("error committing transaction: %w", err)
+		logger.Error("Failed to insert cart item", "error", err.Error())
+		return fmt.Errorf("error inserting cart item: %w", err)
 	}
 
 	duration := time.Since(startTime)
 	logger.Info("Successfully added item to cart",
 		"item_id", item.ID.String(),
-		"product_name", item.ProductName,
-		"unit_price", item.UnitPrice,
-		"total_price", item.UnitPrice*float64(item.Quantity),
 		"duration_ms", duration.Milliseconds())
 
 	return nil
@@ -306,13 +155,36 @@ func (r *CartPostgresRepository) AddItem(ctx context.Context, item *entity.CartI
 
 // UpdateItem updates a cart item's quantity
 func (r *CartPostgresRepository) UpdateItem(ctx context.Context, itemID uuid.UUID, quantity int) error {
+	logger := middleware.Logger.With(
+		"method", "CartRepository.UpdateItem",
+		"item_id", itemID.String(),
+		"quantity", quantity,
+	)
+	logger.Debug("Updating cart item quantity")
+	startTime := time.Now()
+
 	if quantity <= 0 {
-		return domainErrors.ErrInvalidQuantity
+		logger.Debug("Quantity is zero or negative, deleting item instead")
+		// Get the item to find the user ID
+		query := `
+			SELECT user_id FROM cart_items 
+			WHERE id = $1 AND deleted_at IS NULL
+		`
+		var userID uuid.UUID
+		err := r.db.QueryRowContext(ctx, query, itemID).Scan(&userID)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return domainErrors.ErrItemNotFound
+			}
+			return fmt.Errorf("error getting item user ID: %w", err)
+		}
+
+		return r.DeleteItem(ctx, userID, itemID)
 	}
 
 	query := `
-		UPDATE cart_items
-		SET quantity = $1, updated_at = NOW()
+		UPDATE cart_items 
+		SET quantity = $1, updated_at = NOW() 
 		WHERE id = $2 AND deleted_at IS NULL
 		RETURNING id
 	`
@@ -321,133 +193,237 @@ func (r *CartPostgresRepository) UpdateItem(ctx context.Context, itemID uuid.UUI
 	err := r.db.QueryRowContext(ctx, query, quantity, itemID).Scan(&id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return domainErrors.ErrCartItemNotFound
+			logger.Warn("Cart item not found", "error", "ErrItemNotFound")
+			return domainErrors.ErrItemNotFound
 		}
+		logger.Error("Failed to update cart item", "error", err.Error())
 		return fmt.Errorf("error updating cart item: %w", err)
 	}
+
+	duration := time.Since(startTime)
+	logger.Info("Successfully updated cart item quantity",
+		"duration_ms", duration.Milliseconds())
 
 	return nil
 }
 
-// DeleteItem removes an item from a cart
-func (r *CartPostgresRepository) DeleteItem(ctx context.Context, cartID, itemID uuid.UUID) error {
+// DeleteItem removes an item from a user's cart
+func (r *CartPostgresRepository) DeleteItem(ctx context.Context, userID, itemID uuid.UUID) error {
+	logger := middleware.Logger.With(
+		"method", "CartRepository.DeleteItem",
+		"user_id", userID.String(),
+		"item_id", itemID.String(),
+	)
+	logger.Debug("Deleting cart item")
+	startTime := time.Now()
+
 	query := `
-		UPDATE cart_items
-		SET deleted_at = NOW()
-		WHERE id = $1 AND cart_id = $2 AND deleted_at IS NULL
+		DELETE FROM cart_items 
+		WHERE id = $1 AND user_id = $2
 		RETURNING id
 	`
 
 	var id uuid.UUID
-	err := r.db.QueryRowContext(ctx, query, itemID, cartID).Scan(&id)
+	err := r.db.QueryRowContext(ctx, query, itemID, userID).Scan(&id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return domainErrors.ErrCartItemNotFound
+			logger.Warn("Cart item not found", "error", "ErrItemNotFound")
+			return domainErrors.ErrItemNotFound
 		}
+		logger.Error("Failed to delete cart item", "error", err.Error())
 		return fmt.Errorf("error deleting cart item: %w", err)
 	}
+
+	duration := time.Since(startTime)
+	logger.Info("Successfully deleted cart item",
+		"duration_ms", duration.Milliseconds())
 
 	return nil
 }
 
-// GetItem gets a specific item from a cart
-func (r *CartPostgresRepository) GetItem(ctx context.Context, cartID, itemID uuid.UUID) (*entity.CartItem, error) {
+// GetItem gets a specific item from a user's cart
+func (r *CartPostgresRepository) GetItem(ctx context.Context, userID, itemID uuid.UUID) (*entity.CartItem, error) {
+	logger := middleware.Logger.With(
+		"method", "CartRepository.GetItem",
+		"user_id", userID.String(),
+		"item_id", itemID.String(),
+	)
+	logger.Debug("Getting cart item")
+	startTime := time.Now()
+
 	query := `
 		SELECT 
-			ci.id, ci.cart_id, ci.product_id, ci.quantity, ci.created_at, ci.updated_at,
+			ci.id, ci.user_id, ci.product_id, ci.quantity, ci.created_at, ci.updated_at,
 			p.sku, p.name, p.price
 		FROM cart_items ci
 		JOIN products p ON ci.product_id = p.id
-		WHERE ci.id = $1 AND ci.cart_id = $2 AND ci.deleted_at IS NULL
+		WHERE ci.id = $1 AND ci.user_id = $2 AND ci.deleted_at IS NULL
 	`
 
 	var item entity.CartItem
-	err := r.db.QueryRowContext(ctx, query, itemID, cartID).Scan(
+	var productSKU string
+	var productName string
+	var unitPrice float64
+
+	err := r.db.QueryRowContext(ctx, query, itemID, userID).Scan(
 		&item.ID,
-		&item.CartID,
+		&item.UserID,
 		&item.ProductID,
 		&item.Quantity,
 		&item.CreatedAt,
 		&item.UpdatedAt,
-		&item.ProductSKU,
-		&item.ProductName,
-		&item.UnitPrice,
+		&productSKU,
+		&productName,
+		&unitPrice,
 	)
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, domainErrors.ErrCartItemNotFound
+			logger.Warn("Cart item not found", "error", "ErrItemNotFound")
+			return nil, domainErrors.ErrItemNotFound
 		}
+		logger.Error("Failed to get cart item", "error", err.Error())
 		return nil, fmt.Errorf("error getting cart item: %w", err)
 	}
+
+	duration := time.Since(startTime)
+	logger.Info("Successfully retrieved cart item",
+		"duration_ms", duration.Milliseconds())
 
 	return &item, nil
 }
 
-// GetByUserID retrieves a cart by user ID with all items
-func (r *CartPostgresRepository) GetByUserID(ctx context.Context, userID uuid.UUID) (*entity.Cart, error) {
+// GetItemByProductID gets a specific item by product ID from a user's cart
+func (r *CartPostgresRepository) GetItemByProductID(ctx context.Context, userID, productID uuid.UUID) (*entity.CartItem, error) {
 	logger := middleware.Logger.With(
-		"method", "CartRepository.GetByUserID",
+		"method", "CartRepository.GetItemByProductID",
 		"user_id", userID.String(),
+		"product_id", productID.String(),
 	)
-	logger.Debug("Fetching cart by user ID")
+	logger.Debug("Getting cart item by product ID")
 	startTime := time.Now()
 
-	// First, get the cart
-	cartQuery := `
-		SELECT id, user_id, created_at, updated_at
-		FROM carts
-		WHERE user_id = $1 AND deleted_at IS NULL
-		ORDER BY created_at DESC
-		LIMIT 1
+	query := `
+		SELECT 
+			ci.id, ci.user_id, ci.product_id, ci.quantity, ci.created_at, ci.updated_at,
+			p.sku, p.name, p.price
+		FROM cart_items ci
+		JOIN products p ON ci.product_id = p.id
+		WHERE ci.product_id = $1 AND ci.user_id = $2 AND ci.deleted_at IS NULL
 	`
 
-	var cart entity.Cart
-	err := r.db.QueryRowContext(ctx, cartQuery, userID).Scan(
-		&cart.ID,
-		&cart.UserID,
-		&cart.CreatedAt,
-		&cart.UpdatedAt,
+	var item entity.CartItem
+	var productSKU string
+	var productName string
+	var unitPrice float64
+
+	err := r.db.QueryRowContext(ctx, query, productID, userID).Scan(
+		&item.ID,
+		&item.UserID,
+		&item.ProductID,
+		&item.Quantity,
+		&item.CreatedAt,
+		&item.UpdatedAt,
+		&productSKU,
+		&productName,
+		&unitPrice,
 	)
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			logger.Warn("No cart found for user", "error", "ErrCartNotFound")
-			return nil, domainErrors.ErrCartNotFound
+			logger.Warn("Cart item not found", "error", "ErrItemNotFound")
+			return nil, domainErrors.ErrItemNotFound
 		}
-		logger.Error("Failed to query cart by user ID", "error", err.Error())
-		return nil, fmt.Errorf("error querying cart by user ID: %w", err)
+		logger.Error("Failed to get cart item by product ID", "error", err.Error())
+		return nil, fmt.Errorf("error getting cart item by product ID: %w", err)
 	}
 
-	logger.Debug("Cart found, fetching cart items", "cart_id", cart.ID)
+	duration := time.Since(startTime)
+	logger.Info("Successfully retrieved cart item by product ID",
+		"duration_ms", duration.Milliseconds())
 
-	// Then, get all cart items with product details
+	return &item, nil
+}
+
+// ClearUserCart removes all items from a user's cart
+func (r *CartPostgresRepository) ClearUserCart(ctx context.Context, userID uuid.UUID) error {
+	logger := middleware.Logger.With(
+		"method", "CartRepository.ClearUserCart",
+		"user_id", userID.String(),
+	)
+	logger.Debug("Clearing user cart")
+	startTime := time.Now()
+
+	query := `
+		UPDATE cart_items 
+		SET deleted_at = NOW() 
+		WHERE user_id = $1 AND deleted_at IS NULL
+	`
+
+	result, err := r.db.ExecContext(ctx, query, userID)
+	if err != nil {
+		logger.Error("Failed to clear user cart", "error", err.Error())
+		return fmt.Errorf("error clearing user cart: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		logger.Error("Failed to get rows affected", "error", err.Error())
+		return fmt.Errorf("error getting rows affected: %w", err)
+	}
+
+	duration := time.Since(startTime)
+	logger.Info("Successfully cleared user cart",
+		"items_removed", rowsAffected,
+		"duration_ms", duration.Milliseconds())
+
+	return nil
+}
+
+// GetCartInfo retrieves cart with product details for display
+func (r *CartPostgresRepository) GetCartInfo(ctx context.Context, userID uuid.UUID) (*entity.CartInfo, error) {
+	logger := middleware.Logger.With(
+		"method", "CartRepository.GetCartInfo",
+		"user_id", userID.String(),
+	)
+	logger.Debug("Fetching cart info with product details")
+	startTime := time.Now()
+
+	// Create a new cart info with the user ID
+	cartInfo := &entity.CartInfo{
+		UserID:    userID,
+		Items:     []*entity.CartItemInfo{},
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		Subtotal:  0,
+	}
+
+	// Get all cart items with product details
 	itemsQuery := `
 		SELECT 
-			ci.id, ci.cart_id, ci.product_id, ci.quantity, ci.created_at, ci.updated_at,
+			ci.id, ci.user_id, ci.product_id, ci.quantity, ci.created_at, ci.updated_at,
 			p.sku, p.name, p.price
 		FROM cart_items ci
 		JOIN products p ON ci.product_id = p.id
-		WHERE ci.cart_id = $1 AND ci.deleted_at IS NULL
+		WHERE ci.user_id = $1 AND ci.deleted_at IS NULL
 		ORDER BY ci.created_at
 	`
 
-	rows, err := r.db.QueryContext(ctx, itemsQuery, cart.ID)
+	rows, err := r.db.QueryContext(ctx, itemsQuery, userID)
 	if err != nil {
 		logger.Error("Failed to query cart items", "error", err.Error())
 		return nil, fmt.Errorf("error querying cart items: %w", err)
 	}
 	defer rows.Close()
 
-	cart.Items = []*entity.CartItem{}
 	itemCount := 0
-	totalValue := 0.0
+	var totalSubtotal float64 = 0
 
 	for rows.Next() {
-		var item entity.CartItem
+		var item entity.CartItemInfo
 		err := rows.Scan(
 			&item.ID,
-			&item.CartID,
+			&item.UserID,
 			&item.ProductID,
 			&item.Quantity,
 			&item.CreatedAt,
@@ -460,9 +436,13 @@ func (r *CartPostgresRepository) GetByUserID(ctx context.Context, userID uuid.UU
 			logger.Error("Failed to scan cart item", "error", err.Error())
 			return nil, fmt.Errorf("error scanning cart item row: %w", err)
 		}
-		cart.Items = append(cart.Items, &item)
+
+		// Calculate subtotal for the item
+		item.Subtotal = item.UnitPrice * float64(item.Quantity)
+		totalSubtotal += item.Subtotal
+
+		cartInfo.Items = append(cartInfo.Items, &item)
 		itemCount++
-		totalValue += float64(item.Quantity) * item.UnitPrice
 	}
 
 	if err = rows.Err(); err != nil {
@@ -470,12 +450,13 @@ func (r *CartPostgresRepository) GetByUserID(ctx context.Context, userID uuid.UU
 		return nil, fmt.Errorf("error iterating cart item rows: %w", err)
 	}
 
+	cartInfo.Subtotal = totalSubtotal
+
 	duration := time.Since(startTime)
-	logger.Info("Successfully retrieved user cart with items",
-		"cart_id", cart.ID,
+	logger.Info("Successfully retrieved cart info with product details",
 		"item_count", itemCount,
-		"total_value", totalValue,
+		"subtotal", totalSubtotal,
 		"duration_ms", duration.Milliseconds())
 
-	return &cart, nil
+	return cartInfo, nil
 }

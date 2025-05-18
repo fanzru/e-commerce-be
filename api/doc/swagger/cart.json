@@ -7,45 +7,6 @@
   },
   "basePath": "/",
   "paths": {
-    "/api/v1/carts": {
-      "post": {
-        "produces": [
-          "application/json"
-        ],
-        "parameters": [],
-        "responses": {
-          "201": {
-            "description": "Cart created",
-            "schema": {
-              "$ref": "#/definitions/CartResponse"
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "schema": {
-              "$ref": "#/definitions/ErrorResponse"
-            }
-          },
-          "500": {
-            "description": "Internal server error",
-            "schema": {
-              "$ref": "#/definitions/ErrorResponse"
-            }
-          }
-        },
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "tags": [
-          "Cart"
-        ],
-        "description": "Creates a new empty shopping cart",
-        "operationId": "createCart",
-        "summary": "Create a new cart"
-      }
-    },
     "/api/v1/carts/me": {
       "get": {
         "produces": [
@@ -137,7 +98,7 @@
             }
           },
           "404": {
-            "description": "Cart or product not found",
+            "description": "Product not found",
             "schema": {
               "$ref": "#/definitions/ErrorResponse"
             }
@@ -159,19 +120,50 @@
         ],
         "description": "Adds a new item to the current user's cart or updates quantity if already exists",
         "operationId": "addItemToCurrentUserCart",
-        "summary": "Add item to current user's cart"
+        "summary": "Add item to cart"
       }
     },
-    "/api/v1/carts/{cartId}/items/{itemId}": {
-      "parameters": [
-        {
-          "description": "Cart ID",
-          "format": "uuid",
-          "in": "path",
-          "name": "cartId",
-          "required": true,
-          "type": "string"
+    "/api/v1/carts/me/clear": {
+      "delete": {
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": "Cart cleared",
+            "schema": {
+              "$ref": "#/definitions/StandardResponse"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
         },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "tags": [
+          "Cart"
+        ],
+        "description": "Removes all items from the user's cart",
+        "operationId": "clearUserCart",
+        "summary": "Clear user cart"
+      }
+    },
+    "/api/v1/carts/me/items/{itemId}": {
+      "parameters": [
         {
           "description": "Cart Item ID",
           "format": "uuid",
@@ -200,7 +192,7 @@
             }
           },
           "404": {
-            "description": "Cart or item not found",
+            "description": "Item not found",
             "schema": {
               "$ref": "#/definitions/ErrorResponse"
             }
@@ -271,7 +263,7 @@
             }
           },
           "404": {
-            "description": "Cart or item not found",
+            "description": "Item not found",
             "schema": {
               "$ref": "#/definitions/ErrorResponse"
             }
@@ -295,204 +287,43 @@
         "operationId": "updateCartItem",
         "summary": "Update cart item"
       }
-    },
-    "/api/v1/carts/{id}": {
-      "parameters": [
-        {
-          "description": "Cart ID",
-          "format": "uuid",
-          "in": "path",
-          "name": "id",
-          "required": true,
-          "type": "string"
-        }
-      ],
-      "delete": {
-        "produces": [
-          "application/json"
-        ],
-        "parameters": [],
-        "responses": {
-          "204": {
-            "description": "Cart deleted",
-            "schema": {
-              "$ref": "#/definitions/StandardResponse"
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "schema": {
-              "$ref": "#/definitions/ErrorResponse"
-            }
-          },
-          "404": {
-            "description": "Cart not found",
-            "schema": {
-              "$ref": "#/definitions/ErrorResponse"
-            }
-          },
-          "500": {
-            "description": "Internal server error",
-            "schema": {
-              "$ref": "#/definitions/ErrorResponse"
-            }
-          }
-        },
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "tags": [
-          "Cart"
-        ],
-        "description": "Deletes a cart and all its items",
-        "operationId": "deleteCart",
-        "summary": "Delete cart"
-      },
-      "get": {
-        "produces": [
-          "application/json"
-        ],
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "schema": {
-              "$ref": "#/definitions/CartResponse"
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "schema": {
-              "$ref": "#/definitions/ErrorResponse"
-            }
-          },
-          "404": {
-            "description": "Cart not found",
-            "schema": {
-              "$ref": "#/definitions/ErrorResponse"
-            }
-          },
-          "500": {
-            "description": "Internal server error",
-            "schema": {
-              "$ref": "#/definitions/ErrorResponse"
-            }
-          }
-        },
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "tags": [
-          "Cart"
-        ],
-        "description": "Retrieves a cart by its ID with all items",
-        "operationId": "getCart",
-        "summary": "Get cart by ID"
-      }
-    },
-    "/api/v1/carts/{id}/items": {
-      "parameters": [
-        {
-          "description": "Cart ID",
-          "format": "uuid",
-          "in": "path",
-          "name": "id",
-          "required": true,
-          "type": "string"
-        }
-      ],
-      "post": {
-        "consumes": [
-          "application/json"
-        ],
-        "produces": [
-          "application/json"
-        ],
-        "parameters": [
-          {
-            "in": "body",
-            "name": "body",
-            "required": true,
-            "schema": {
-              "properties": {
-                "product_id": {
-                  "description": "ID of the product to add",
-                  "format": "uuid",
-                  "type": "string"
-                },
-                "quantity": {
-                  "description": "Quantity to add",
-                  "minimum": 1,
-                  "type": "integer"
-                }
-              },
-              "required": [
-                "product_id",
-                "quantity"
-              ],
-              "type": "object"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Item added or updated",
-            "schema": {
-              "$ref": "#/definitions/CartItemResponse"
-            }
-          },
-          "400": {
-            "description": "Bad request",
-            "schema": {
-              "$ref": "#/definitions/ErrorResponse"
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "schema": {
-              "$ref": "#/definitions/ErrorResponse"
-            }
-          },
-          "404": {
-            "description": "Cart or product not found",
-            "schema": {
-              "$ref": "#/definitions/ErrorResponse"
-            }
-          },
-          "500": {
-            "description": "Internal server error",
-            "schema": {
-              "$ref": "#/definitions/ErrorResponse"
-            }
-          }
-        },
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "tags": [
-          "Cart Items"
-        ],
-        "description": "Adds a new item to the cart or updates quantity if already exists",
-        "operationId": "addItemToCart",
-        "summary": "Add item to cart"
-      }
     }
   },
   "definitions": {
-    "Cart": {
+    "ApplicablePromotion": {
       "properties": {
-        "created_at": {
-          "format": "date-time",
+        "description": {
+          "description": "Promotion description",
           "type": "string"
         },
+        "discount": {
+          "description": "Discount amount for this promotion",
+          "format": "float",
+          "type": "number"
+        },
         "id": {
+          "description": "Promotion ID",
           "format": "uuid",
+          "type": "string"
+        },
+        "type": {
+          "description": "Promotion type",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "Cart": {
+      "properties": {
+        "applicable_promotions": {
+          "description": "List of promotions that can be applied to this cart",
+          "items": {
+            "$ref": "#/definitions/ApplicablePromotion"
+          },
+          "type": "array"
+        },
+        "created_at": {
+          "format": "date-time",
           "type": "string"
         },
         "items": {
@@ -500,6 +331,16 @@
             "$ref": "#/definitions/CartItem"
           },
           "type": "array"
+        },
+        "potential_discount": {
+          "description": "Total potential discount if all applicable promotions are applied",
+          "format": "float",
+          "type": "number"
+        },
+        "potential_total": {
+          "description": "Potential total after applying all available discounts",
+          "format": "float",
+          "type": "number"
         },
         "subtotal": {
           "format": "float",
@@ -521,11 +362,6 @@
     },
     "CartItem": {
       "properties": {
-        "cart_id": {
-          "description": "Cart ID",
-          "format": "uuid",
-          "type": "string"
-        },
         "created_at": {
           "description": "Creation timestamp",
           "format": "date-time",
@@ -566,6 +402,11 @@
         "updated_at": {
           "description": "Last update timestamp",
           "format": "date-time",
+          "type": "string"
+        },
+        "user_id": {
+          "description": "User ID who owns this cart item",
+          "format": "uuid",
           "type": "string"
         }
       },

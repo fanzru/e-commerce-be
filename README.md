@@ -104,3 +104,87 @@ API documentation is available via Swagger UI when the application is running, o
 ## License
 
 MIT
+
+## Running with Docker
+
+### Method 1: Using Docker Compose
+
+```bash
+# Run with default configuration
+docker-compose up -d
+
+# Or with custom environment variables
+DB_HOST=192.168.1.10 SERVER_PORT=3000 docker-compose up -d
+```
+
+### Method 2: Using Helper Scripts
+
+```bash
+# Make scripts executable
+chmod +x scripts/docker-build.sh scripts/docker-run.sh
+
+# Build image
+./scripts/docker-build.sh
+
+# Run container
+./scripts/docker-run.sh
+```
+
+### Method 3: Manual
+
+```bash
+# Build image
+docker build -t e-commerce-be \
+  --build-arg DB_HOST=host.docker.internal \
+  --build-arg SWAGGER_HOST=host.docker.internal .
+
+# Run container
+docker run -p 8080:8080 \
+  -e DB_HOST=host.docker.internal \
+  -e SWAGGER_HOST=host.docker.internal \
+  e-commerce-be
+```
+
+## Accessing Swagger UI
+
+Swagger UI is available at: http://host.docker.internal:8080/swagger/
+
+## Deployment
+
+This project uses GitHub Actions for CI/CD:
+
+1. **Pull Requests (CI):** Verifies code format, builds Go binary, and builds Docker image without running the database
+2. **Push to Main (CD):** Automatically builds and pushes to Docker Hub
+
+### Setup GitHub Secrets
+
+To enable GitHub Actions, add the following secrets in your repository settings:
+
+1. `DOCKER_HUB_USERNAME` - Docker Hub username
+2. `DOCKER_HUB_ACCESS_TOKEN` - Access token for Docker Hub (not password)
+
+### Deployment Notes
+
+Since this application requires a database, you need to ensure a PostgreSQL database is available when running the Docker image. Configure database connection using environment variables as described in the "Environment Variables" section.
+
+### How to Get Docker Hub Access Token
+
+1. Login to Docker Hub
+2. Click username → Account Settings → Security
+3. Click "New Access Token"
+4. Name the token (e.g., "GitHub Actions")
+5. Select required access (minimum: "Read & Write")
+6. Click "Generate" and copy the token that appears
+
+## Environment Variables
+
+| Variable     | Description                          | Default              |
+| ------------ | ------------------------------------ | -------------------- |
+| DB_HOST      | Database host                        | host.docker.internal |
+| DB_PORT      | Database port                        | 5555                 |
+| DB_USER      | Database username                    | fanzru               |
+| DB_PASSWORD  | Database password                    | ganteng              |
+| DB_NAME      | Database name                        | ecommerce            |
+| SERVER_PORT  | Server port                          | 8080                 |
+| APP_ENV      | Environment (development/production) | development          |
+| SWAGGER_HOST | Host for swagger URL                 | host.docker.internal |

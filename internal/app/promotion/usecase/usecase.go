@@ -63,5 +63,5 @@ type PromotionUseCase interface {
 	Delete(ctx context.Context, id uuid.UUID) error
 
 	// ApplyPromotions applies promotions to a cart and returns the discounts
-	ApplyPromotions(ctx context.Context, cart *cartEntity.Cart) ([]PromotionDiscount, float64, error)
+	ApplyPromotions(ctx context.Context, cart *cartEntity.CartInfo) ([]PromotionDiscount, float64, error)
 }

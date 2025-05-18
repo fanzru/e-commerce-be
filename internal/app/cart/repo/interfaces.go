@@ -11,31 +11,32 @@ import (
 // Error constants for cart repository
 var (
 	ErrCartNotFound = errors.New("cart not found")
+	ErrItemNotFound = errors.New("cart item not found")
 )
 
 // CartRepository defines the interface for cart repository
 type CartRepository interface {
-	// GetByID retrieves a cart by its ID with all items
-	GetByID(ctx context.Context, id uuid.UUID) (*entity.Cart, error)
-
-	// GetByUserID retrieves a cart by user ID
+	// GetByUserID retrieves all cart items for a user
 	GetByUserID(ctx context.Context, userID uuid.UUID) (*entity.Cart, error)
 
-	// Create creates a new empty cart
-	Create(ctx context.Context, cart *entity.Cart) error
+	// GetCartInfo retrieves cart with product details for display
+	GetCartInfo(ctx context.Context, userID uuid.UUID) (*entity.CartInfo, error)
 
-	// Delete deletes a cart by its ID
-	Delete(ctx context.Context, id uuid.UUID) error
-
-	// AddItem adds an item to a cart or updates its quantity if already exists
+	// AddItem adds an item to a user's cart or updates its quantity if already exists
 	AddItem(ctx context.Context, item *entity.CartItem) error
 
 	// UpdateItem updates a cart item's quantity
 	UpdateItem(ctx context.Context, itemID uuid.UUID, quantity int) error
 
-	// DeleteItem removes an item from a cart
-	DeleteItem(ctx context.Context, cartID, itemID uuid.UUID) error
+	// DeleteItem removes an item from a user's cart
+	DeleteItem(ctx context.Context, userID, itemID uuid.UUID) error
 
-	// GetItem gets a specific item from a cart
-	GetItem(ctx context.Context, cartID, itemID uuid.UUID) (*entity.CartItem, error)
+	// GetItem gets a specific item from a user's cart
+	GetItem(ctx context.Context, userID, itemID uuid.UUID) (*entity.CartItem, error)
+
+	// GetItemByProductID gets a specific item by product ID from a user's cart
+	GetItemByProductID(ctx context.Context, userID, productID uuid.UUID) (*entity.CartItem, error)
+
+	// ClearUserCart removes all items from a user's cart
+	ClearUserCart(ctx context.Context, userID uuid.UUID) error
 }

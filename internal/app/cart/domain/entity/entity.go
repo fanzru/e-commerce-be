@@ -8,33 +8,27 @@ import (
 
 // CartItem represents an item in a cart
 type CartItem struct {
-	ID          uuid.UUID  `json:"id"`
-	CartID      uuid.UUID  `json:"cart_id"`
-	ProductID   uuid.UUID  `json:"product_id"`
-	ProductSKU  string     `json:"product_sku"`
-	ProductName string     `json:"product_name"`
-	UnitPrice   float64    `json:"unit_price"`
-	Quantity    int        `json:"quantity"`
-	CreatedAt   time.Time  `json:"created_at"`
-	UpdatedAt   time.Time  `json:"updated_at"`
-	DeletedAt   *time.Time `json:"deleted_at,omitempty"`
+	ID        uuid.UUID  `json:"id"`
+	UserID    uuid.UUID  `json:"user_id"`
+	ProductID uuid.UUID  `json:"product_id"`
+	Quantity  int        `json:"quantity"`
+	CreatedAt time.Time  `json:"created_at"`
+	UpdatedAt time.Time  `json:"updated_at"`
+	DeletedAt *time.Time `json:"deleted_at,omitempty"`
 }
 
-// Cart represents a shopping cart
+// Cart represents a collection of cart items for a user
 type Cart struct {
-	ID        uuid.UUID   `json:"id"`
 	UserID    uuid.UUID   `json:"user_id"`
 	Items     []*CartItem `json:"items"`
 	CreatedAt time.Time   `json:"created_at"`
 	UpdatedAt time.Time   `json:"updated_at"`
-	DeletedAt *time.Time  `json:"deleted_at,omitempty"`
 }
 
 // NewCart creates a new empty cart
 func NewCart() *Cart {
 	now := time.Now()
 	return &Cart{
-		ID:        uuid.New(),
 		Items:     []*CartItem{},
 		CreatedAt: now,
 		UpdatedAt: now,
@@ -49,7 +43,7 @@ func NewCartWithUser(userID uuid.UUID) *Cart {
 }
 
 // AddItem adds a product to the cart or updates its quantity if it already exists
-func (c *Cart) AddItem(productID uuid.UUID, sku, name string, price float64, quantity int) *CartItem {
+func (c *Cart) AddItem(productID uuid.UUID, quantity int) *CartItem {
 	// Check if the item already exists in the cart
 	for i, item := range c.Items {
 		if item.ProductID == productID {
@@ -63,15 +57,12 @@ func (c *Cart) AddItem(productID uuid.UUID, sku, name string, price float64, qua
 
 	// Create new item
 	item := &CartItem{
-		ID:          uuid.New(),
-		CartID:      c.ID,
-		ProductID:   productID,
-		ProductSKU:  sku,
-		ProductName: name,
-		UnitPrice:   price,
-		Quantity:    quantity,
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
+		ID:        uuid.New(),
+		UserID:    c.UserID,
+		ProductID: productID,
+		Quantity:  quantity,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
 	}
 
 	c.Items = append(c.Items, item)
@@ -147,9 +138,41 @@ func (c *Cart) TotalItems() int {
 
 // Subtotal calculates the subtotal of all items in the cart (before promotions)
 func (c *Cart) Subtotal() float64 {
-	subtotal := 0.0
-	for _, item := range c.Items {
-		subtotal += item.UnitPrice * float64(item.Quantity)
-	}
-	return subtotal
+	// Since unit price is now stored in the product table, we can't calculate this directly
+	// This would need to be calculated at the repository level with product information
+	return 0.0
+}
+
+// CartItemInfo represents a cart item with product details for display purposes
+type CartItemInfo struct {
+	ID          uuid.UUID `json:"id"`
+	UserID      uuid.UUID `json:"user_id"`
+	ProductID   uuid.UUID `json:"product_id"`
+	Quantity    int       `json:"quantity"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+	ProductSKU  string    `json:"product_sku"`
+	ProductName string    `json:"product_name"`
+	UnitPrice   float64   `json:"unit_price"`
+	Subtotal    float64   `json:"subtotal"`
+}
+
+// CartInfo represents a cart with product details for display purposes
+type CartInfo struct {
+	UserID               uuid.UUID             `json:"user_id"`
+	Items                []*CartItemInfo       `json:"items"`
+	CreatedAt            time.Time             `json:"created_at"`
+	UpdatedAt            time.Time             `json:"updated_at"`
+	Subtotal             float64               `json:"subtotal"`
+	ApplicablePromotions []ApplicablePromotion `json:"applicable_promotions,omitempty"`
+	PotentialDiscount    float64               `json:"potential_discount,omitempty"`
+	PotentialTotal       float64               `json:"potential_total,omitempty"`
+}
+
+// ApplicablePromotion represents a promotion that can be applied to a cart
+type ApplicablePromotion struct {
+	ID          uuid.UUID `json:"id"`
+	Type        string    `json:"type"`
+	Description string    `json:"description"`
+	Discount    float64   `json:"discount"`
 }

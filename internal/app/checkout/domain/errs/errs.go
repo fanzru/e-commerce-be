@@ -20,13 +20,13 @@ func NewCheckoutNotFoundError(id string) error {
 }
 
 // NewCheckoutFailedError creates a new checkout failed error
-func NewCheckoutFailedError(cartID string, err error) error {
-	return appErrors.NewBadRequest(fmt.Sprintf("%s for cart %s: %v", ErrCheckoutFailedMsg, cartID, err))
+func NewCheckoutFailedError(userID string, err error) error {
+	return appErrors.NewBadRequest(fmt.Sprintf("%s for user %s: %v", ErrCheckoutFailedMsg, userID, err))
 }
 
 // NewCartEmptyError creates a new cart empty error
-func NewCartEmptyError(cartID string) error {
-	return appErrors.NewBadRequest(fmt.Sprintf("%s: %s", ErrCartEmptyMsg, cartID))
+func NewCartEmptyError(userID string) error {
+	return appErrors.NewBadRequest(fmt.Sprintf("%s for user %s", ErrCartEmptyMsg, userID))
 }
 
 // NewInsufficientInventoryError creates a new insufficient inventory error
