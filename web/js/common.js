@@ -59,6 +59,21 @@ async function fetchApi(endpoint, options = {}) {
       data,
     });
 
+    // Debug for products endpoint
+    if (endpoint === "/products") {
+      console.log(
+        "%c PRODUCTS API DETAILED RESPONSE:",
+        "background: #222; color: #bada55",
+        JSON.stringify(data, null, 2)
+      );
+      console.log("Structure path check:", {
+        "data property exists": !!data.data,
+        "data.data exists": data.data && !!data.data.data,
+        "data.data.products exists":
+          data.data && data.data.data && !!data.data.data.products,
+      });
+    }
+
     if (!response.ok) {
       const errorMessage =
         typeof data === "object" && data.message

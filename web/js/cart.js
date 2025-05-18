@@ -14,9 +14,27 @@ const cart = {
       console.log("Raw API response for cart:", response);
 
       // Handle different possible response formats
-      if (response && response.data) {
-        return response.data; // If using { code, data, message } format
+
+      // Format 1: Double nested response format (current)
+      // {code, message, data: {code, data: {cart}, message}, server_time}
+      if (response?.data?.data) {
+        console.log("Found double-nested cart data format");
+        return { data: response.data.data };
       }
+
+      // Format 2: Single wrapper response (after backend fix)
+      // {code, message, data: {cart}, server_time}
+      if (response?.data) {
+        console.log("Found single-level nested cart data format");
+        return { data: response.data };
+      }
+
+      // Format 3: Direct cart object
+      if (response && response.id) {
+        console.log("Found direct cart object format");
+        return { data: response };
+      }
+
       return response;
     } catch (error) {
       console.error("Error fetching cart:", error);
@@ -193,8 +211,9 @@ const cart = {
   // Remove item from cart
   async removeFromCart(cartId, itemId) {
     try {
-      console.log(`Removing item ${itemId} from cart ${cartId}...`);
-      const response = await fetchApi(`/carts/${cartId}/items/${itemId}`, {
+      console.log(`Removing item ${itemId} from cart...`);
+      // Update to use the /carts/me/items/{itemId} endpoint
+      const response = await fetchApi(`/carts/me/items/${itemId}`, {
         method: "DELETE",
       });
       console.log("Remove from cart response:", response);
@@ -208,10 +227,9 @@ const cart = {
   // Update cart item quantity
   async updateCartItem(cartId, itemId, quantity) {
     try {
-      console.log(
-        `Updating item ${itemId} in cart ${cartId} to quantity ${quantity}...`
-      );
-      const response = await fetchApi(`/carts/${cartId}/items/${itemId}`, {
+      console.log(`Updating item ${itemId} to quantity ${quantity}...`);
+      // Update to use the /carts/me/items/{itemId} endpoint
+      const response = await fetchApi(`/carts/me/items/${itemId}`, {
         method: "PUT",
         body: JSON.stringify({
           quantity: quantity,
@@ -475,12 +493,73 @@ function updateCartTotal() {
     newTotal += subtotal;
   });
 
-  // For now, no discounts in the recalculation
-  const discount = 0;
-  const finalTotal = Math.max(0, newTotal - discount);
+  // Refresh cart to get updated promotions and discounts
+  refreshCartPromotions(newTotal);
+}
 
-  // Update summary
-  updateCartSummary(newTotal, discount, finalTotal);
+// Function to refresh cart promotions
+async function refreshCartPromotions(subtotal) {
+  try {
+    // Get updated cart with promotions
+    const cartResponse = await cart.getCart();
+
+    if (cartResponse && cartResponse.data) {
+      const userCart = cartResponse.data;
+
+      // Check for promotions and update them
+      const hasPromotions =
+        userCart.applicable_promotions &&
+        userCart.applicable_promotions.length > 0;
+      const discount = hasPromotions
+        ? parseFloat(userCart.potential_discount || 0)
+        : 0;
+      const finalTotal = subtotal - discount;
+
+      // Update the cart summary with fresh data
+      updateCartSummary(subtotal, discount, finalTotal);
+
+      // Show promotions if available
+      if (hasPromotions) {
+        const discountSection = document.getElementById("discount-section");
+        const discountItems = document.getElementById("discount-items");
+
+        if (discountSection) {
+          discountSection.classList.remove("hidden");
+        }
+
+        if (discountItems) {
+          const promotionsHtml = userCart.applicable_promotions
+            .map((promo) => {
+              const promoDiscount = parseFloat(promo.discount || 0);
+              return `
+                <div class="flex justify-between text-sm">
+                  <span>${promo.description || "Diskon"}</span>
+                  <span class="font-medium">-${formatPrice(
+                    promoDiscount
+                  )}</span>
+                </div>
+              `;
+            })
+            .join("");
+
+          discountItems.innerHTML = promotionsHtml;
+        }
+      } else {
+        // Hide discount section if no promotions
+        const discountSection = document.getElementById("discount-section");
+        if (discountSection) {
+          discountSection.classList.add("hidden");
+        }
+      }
+    } else {
+      // If cart data is not available, just update with no discount
+      updateCartSummary(subtotal, 0, subtotal);
+    }
+  } catch (error) {
+    console.error("Error refreshing cart promotions:", error);
+    // Fallback to updating summary without discounts
+    updateCartSummary(subtotal, 0, subtotal);
+  }
 }
 
 // Function to update cart summary
@@ -522,7 +601,8 @@ function setupCartItemEventListeners(cartItems, userCart) {
       }
 
       try {
-        await cart.updateCartItem(userCart.id, itemId, newQty);
+        // Remove cartId parameter since we use /carts/me endpoint now
+        await cart.updateCartItem(null, itemId, newQty);
 
         // Update the item subtotal
         const cartItem = input.closest(".cart-item");
@@ -564,7 +644,8 @@ function setupCartItemEventListeners(cartItems, userCart) {
       input.value = newQty;
 
       try {
-        await cart.updateCartItem(userCart.id, itemId, newQty);
+        // Remove cartId parameter since we use /carts/me endpoint now
+        await cart.updateCartItem(null, itemId, newQty);
 
         // Update the item subtotal
         const cartItem = button.closest(".cart-item");
@@ -608,7 +689,8 @@ function setupCartItemEventListeners(cartItems, userCart) {
       input.value = newQty;
 
       try {
-        await cart.updateCartItem(userCart.id, itemId, newQty);
+        // Remove cartId parameter since we use /carts/me endpoint now
+        await cart.updateCartItem(null, itemId, newQty);
 
         // Update the item subtotal
         const cartItem = button.closest(".cart-item");
@@ -636,7 +718,8 @@ function setupCartItemEventListeners(cartItems, userCart) {
         confirm("Are you sure you want to remove this item from your cart?")
       ) {
         try {
-          await cart.removeFromCart(userCart.id, itemId);
+          // Remove cartId parameter since we use /carts/me endpoint now
+          await cart.removeFromCart(null, itemId);
 
           // Remove the item from the UI
           const cartItem = button.closest(".cart-item");

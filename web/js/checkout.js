@@ -221,19 +221,30 @@ function renderCheckout(checkout, container) {
     .map((item) => {
       return `
       <div class="checkout-item p-4 border-b border-gray-200">
-        <div class="flex justify-between">
-          <div>
-            <h3 class="font-medium">${item.product_name}</h3>
-            ${
-              item.product_sku
-                ? `<p class="text-sm text-gray-500">SKU: ${item.product_sku}</p>`
-                : ""
-            }
-            <p class="text-sm">Price: ${formatPrice(item.unit_price)}</p>
-            <p class="text-sm">Quantity: ${item.quantity}</p>
+        <div class="flex justify-between items-center">
+          <div class="flex items-center">
+            <div class="bg-gray-100 w-16 h-16 flex-shrink-0 rounded-md flex items-center justify-center mr-4">
+              <i class="fas fa-box text-gray-400"></i>
+            </div>
+            <div>
+              <h3 class="font-medium text-gray-800">${item.product_name}</h3>
+              ${
+                item.product_sku
+                  ? `<p class="text-xs text-gray-500">SKU: ${item.product_sku}</p>`
+                  : ""
+              }
+              <div class="flex space-x-4 mt-1">
+                <p class="text-sm text-gray-600">Price: ${formatPrice(
+                  item.unit_price
+                )}</p>
+                <p class="text-sm text-gray-600">Qty: ${item.quantity}</p>
+              </div>
+            </div>
           </div>
           <div class="text-right">
-            <p class="font-medium">${formatPrice(item.subtotal)}</p>
+            <p class="font-medium text-gray-800">${formatPrice(
+              item.subtotal
+            )}</p>
           </div>
         </div>
       </div>
@@ -245,8 +256,11 @@ function renderCheckout(checkout, container) {
     ? checkout.promotions
         .map(
           (promotion) => `
-          <div class="flex justify-between p-2 bg-green-50 border-b border-green-100">
-            <p class="text-sm text-green-800">${promotion.description}</p>
+          <div class="flex justify-between items-center p-3 bg-green-50 border-b border-green-100">
+            <div class="flex items-center">
+              <span class="text-green-600 mr-2"><i class="fas fa-tag"></i></span>
+              <p class="text-sm text-green-800">${promotion.description}</p>
+            </div>
             <p class="text-sm font-medium text-green-800">-${formatPrice(
               promotion.discount
             )}</p>
@@ -254,19 +268,19 @@ function renderCheckout(checkout, container) {
         `
         )
         .join("")
-    : `<p class="text-sm text-gray-500 p-2">No promotions applied</p>`;
+    : `<div class="p-4 text-center text-gray-500 bg-gray-50"><p class="text-sm">No promotions available for this order</p></div>`;
 
   container.innerHTML = `
-    <div class="bg-white shadow-sm rounded-md overflow-hidden">
+    <div class="bg-white shadow-sm rounded-lg overflow-hidden">
       <div class="bg-gray-50 px-4 py-3 border-b border-gray-200">
-        <h2 class="text-lg font-medium text-gray-800">Order Summary</h2>
+        <h2 class="text-lg font-medium text-gray-800">Order Items</h2>
       </div>
       
       <div class="divide-y divide-gray-200">
         ${itemsHtml}
       </div>
       
-      <div class="bg-gray-50 px-4 py-3 border-b border-gray-200">
+      <div class="bg-gray-50 px-4 py-3 border-b border-gray-200 mt-4">
         <h3 class="text-md font-medium text-gray-800">Applied Promotions</h3>
       </div>
       
@@ -274,30 +288,46 @@ function renderCheckout(checkout, container) {
         ${promotionsHtml}
       </div>
       
-      <div class="p-4 space-y-2">
+      <div class="p-6 space-y-3 bg-gray-50">
         <div class="flex justify-between">
           <p class="text-gray-600">Subtotal:</p>
           <p class="font-medium">${formatPrice(checkout.subtotal)}</p>
         </div>
         
-        <div class="flex justify-between text-green-700">
+        <div class="flex justify-between text-green-700 ${
+          checkout.total_discount > 0 ? "" : "hidden"
+        }">
           <p>Discount:</p>
           <p>-${formatPrice(checkout.total_discount)}</p>
         </div>
         
-        <div class="flex justify-between text-lg font-medium border-t border-gray-200 pt-2 mt-2">
+        <div class="flex justify-between text-lg font-medium border-t border-gray-200 pt-3 mt-3">
           <p>Total:</p>
-          <p>${formatPrice(checkout.total)}</p>
+          <p class="text-green-700">${formatPrice(checkout.total)}</p>
         </div>
       </div>
       
-      <div class="p-4 bg-gray-50 border-t border-gray-200">
-        <div class="flex flex-col space-y-3 sm:flex-row sm:space-y-0 sm:space-x-3">
-          <a href="cart.html" class="inline-block text-center px-4 py-2 border border-gray-300 rounded-md font-medium text-gray-700 bg-white hover:bg-gray-50">
-            Back to Cart
+      <div class="p-6 bg-white border-t border-gray-200">
+        <div class="mb-6">
+          <h3 class="text-md font-medium text-gray-800 mb-3">Payment Method</h3>
+          <div class="flex space-x-4">
+            <label class="border rounded-md p-3 flex items-center cursor-pointer bg-blue-50 border-blue-300">
+              <input type="radio" name="payment_method" value="credit_card" checked class="mr-2">
+              <span><i class="fas fa-credit-card mr-2"></i> Credit Card</span>
+            </label>
+            <label class="border rounded-md p-3 flex items-center cursor-pointer">
+              <input type="radio" name="payment_method" value="paypal" class="mr-2">
+              <span><i class="fab fa-paypal mr-2"></i> PayPal</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="flex flex-col space-y-3 sm:flex-row sm:space-y-0 sm:space-x-4">
+          <a href="cart.html" class="inline-flex justify-center items-center px-4 py-2 border border-gray-300 rounded-md font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors duration-150">
+            <i class="fas fa-arrow-left mr-2"></i> Back to Cart
           </a>
-          <button id="place-order-btn" class="inline-block text-center px-4 py-2 border border-transparent rounded-md font-medium text-white bg-green-600 hover:bg-green-700">
-            Place Order
+          <button id="place-order-btn" class="inline-flex justify-center items-center px-4 py-2 border border-transparent rounded-md font-medium text-white bg-green-600 hover:bg-green-700 transition-colors duration-150">
+            <i class="fas fa-check-circle mr-2"></i> Place Order
           </button>
         </div>
       </div>
@@ -309,18 +339,31 @@ function renderCheckout(checkout, container) {
   if (placeOrderBtn) {
     placeOrderBtn.addEventListener("click", async () => {
       try {
-        placeOrderBtn.textContent = "Processing...";
+        placeOrderBtn.innerHTML =
+          '<i class="fas fa-spinner fa-spin mr-2"></i> Processing...';
         placeOrderBtn.disabled = true;
 
         // Simulate order processing
         await new Promise((resolve) => setTimeout(resolve, 1500));
 
-        alert("Your order has been placed successfully!");
-        window.location.href = "products.html";
+        // Show success message
+        container.innerHTML = `
+          <div class="bg-white shadow-sm rounded-lg overflow-hidden p-8 text-center">
+            <div class="text-green-500 mb-4">
+              <i class="fas fa-check-circle text-5xl"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-gray-800 mb-2">Order Placed Successfully!</h2>
+            <p class="text-gray-600 mb-6">Thank you for your purchase. Your order is being processed.</p>
+            <a href="products.html" class="inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+              <i class="fas fa-shopping-bag mr-2"></i> Continue Shopping
+            </a>
+          </div>
+        `;
       } catch (error) {
         console.error("Error placing order:", error);
         alert("Failed to place order: " + error.message);
-        placeOrderBtn.textContent = "Place Order";
+        placeOrderBtn.innerHTML =
+          '<i class="fas fa-check-circle mr-2"></i> Place Order';
         placeOrderBtn.disabled = false;
       }
     });

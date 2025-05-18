@@ -126,52 +126,49 @@
             // Clear loading indicator
             productGridContainer.innerHTML = "";
 
-            // Handle multiple possible response formats
+            // Simplified handling for the specific nested response format
             let productList = [];
 
-            // Check response.data.products format (as per API docs)
+            // Access the products array directly from the helper function that already handles nesting
             if (
-              response &&
-              response.data &&
+              response?.data?.products &&
               Array.isArray(response.data.products)
             ) {
               productList = response.data.products;
-            }
-            // Check direct response.data array format
-            else if (
-              response &&
-              response.data &&
-              Array.isArray(response.data)
-            ) {
-              productList = response.data;
-            }
-            // Check if response itself is an array
-            else if (Array.isArray(response)) {
-              productList = response;
-            }
-            // Check for successful response with data
-            else if (response && response.code === "SUCCESS" && response.data) {
-              // If data is array, use it directly
-              if (Array.isArray(response.data)) {
-                productList = response.data;
-              }
-              // If data has products array property
-              else if (
-                response.data.products &&
-                Array.isArray(response.data.products)
-              ) {
-                productList = response.data.products;
-              }
-            }
-
-            console.log("Parsed product list:", productList);
-
-            if (productList.length === 0) {
+              console.log(
+                "Successfully extracted products:",
+                productList.length
+              );
+            } else {
+              console.warn("Unexpected response format - no products found");
               productGridContainer.innerHTML = `
                 <div class="col-span-full text-center py-12">
-                  <p class="text-gray-500">No products available at this time. Check back later!</p>
+                  <p class="text-red-500">Unable to retrieve products - unexpected data format</p>
+                  <div class="mt-4 p-4 bg-gray-100 rounded-md text-xs text-left overflow-auto max-h-32">
+                    <pre>Response format: ${JSON.stringify(
+                      response,
+                      null,
+                      2
+                    )}</pre>
+                  </div>
                 </div>
               `;
+              return;
+            }
+
+            if (!productList || productList.length === 0) {
+              productGridContainer.innerHTML = `
+                  <div class="col-span-full text-center py-12">
+                    <p class="text-gray-500">No products available at this time. Check back later!</p>
+                    <div class="mt-4 p-4 bg-gray-100 rounded-md text-xs text-left overflow-auto max-h-32">
+                      <pre>Response format: ${JSON.stringify(
+                        response,
+                        null,
+                        2
+                      )}</pre>
+                    </div>
+                  </div>
+                `;
               return;
             }
 
@@ -327,16 +324,16 @@
           } catch (error) {
             console.error("Error loading products:", error);
             productGridContainer.innerHTML = `
-              <div class="col-span-full text-center py-12">
-                <p class="text-red-500"><i class="fas fa-exclamation-circle mr-2"></i>Failed to load products. Please try again later.</p>
-                <button id="retry-products" class="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
-                  <i class="fas fa-sync mr-2"></i>Try Again
-                </button>
-                <div class="mt-4 text-left bg-gray-100 p-4 rounded-md overflow-auto max-h-32 text-xs">
-                  <code>Error: ${error.message || "Unknown error"}</code>
+                <div class="col-span-full text-center py-12">
+                  <p class="text-red-500"><i class="fas fa-exclamation-circle mr-2"></i>Failed to load products. Please try again later.</p>
+                  <button id="retry-products" class="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+                    <i class="fas fa-sync mr-2"></i>Try Again
+                  </button>
+                  <div class="mt-4 text-left bg-gray-100 p-4 rounded-md overflow-auto max-h-32 text-xs">
+                    <code>Error: ${error.message || "Unknown error"}</code>
+                  </div>
                 </div>
-              </div>
-            `;
+              `;
             // Add retry button functionality
             document
               .getElementById("retry-products")

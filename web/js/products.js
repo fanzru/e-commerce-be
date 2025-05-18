@@ -10,6 +10,43 @@ const products = {
       console.log("Fetching products from API...");
       const response = await fetchApi("/products");
       console.log("Raw API response for products:", response);
+
+      // Adaptive handling for various response formats
+      // to handle both existing nested format and future simplified format
+
+      // Format 1: Existing deeply nested format
+      // {code, message, data: {code, data: {products}, message}, server_time}
+      if (response?.data?.data?.products) {
+        console.log("Found deeply nested products format");
+        return {
+          data: {
+            products: response.data.data.products,
+          },
+        };
+      }
+
+      // Format 2: Single wrapper response from fixed backend
+      // {code, message, data: {products}, server_time}
+      if (response?.data?.products) {
+        console.log("Found single-level nested products format");
+        return {
+          data: {
+            products: response.data.products,
+          },
+        };
+      }
+
+      // Format 3: Direct products array
+      if (Array.isArray(response)) {
+        console.log("Found direct products array format");
+        return {
+          data: {
+            products: response,
+          },
+        };
+      }
+
+      // If no recognized format, return as is and let the error handling manage it
       return response;
     } catch (error) {
       console.error("Error fetching products:", error);
