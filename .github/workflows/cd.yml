@@ -20,6 +20,14 @@ jobs:
       - name: Install dependencies
         run: go mod download
 
+      - name: Install oapi-codegen v2
+        run: go install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@latest
+
+      - name: Generate HTTP code
+        run: |
+          echo "Generating HTTP code from OpenAPI specs"
+          make gen-http || ./scripts/generate.sh
+
       - name: Build Go application
         run: go build -v ./cmd/core
 
